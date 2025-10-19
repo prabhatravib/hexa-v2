@@ -35,15 +35,15 @@ function App() {
   // Dynamic aspect count for enhanced mode (default 7, can be 2-10)
   const [aspectCount, setAspectCount] = useState(7);
   
-  // Aspect configurations with descriptions
-  const [aspectConfigs, setAspectConfigs] = useState<Array<{id: number; description: string}>>([
-    { id: 1, description: "General conversation - general questions and chat" },
-    { id: 2, description: "Technical support - help with bugs and technical issues" },
-    { id: 3, description: "Sales inquiries - pricing, features, and product information" },
-    { id: 4, description: "Billing questions - payments, accounts, and transactions" },
-    { id: 5, description: "Account management - profile, settings, and preferences" },
-    { id: 6, description: "Product information - specifications, features, and details" },
-    { id: 7, description: "General information - company policies and FAQ" }
+  // Aspect configurations with titles and descriptions
+  const [aspectConfigs, setAspectConfigs] = useState<Array<{id: number; title: string; description: string}>>([
+    { id: 1, title: "General Chat", description: "General conversation - general questions and chat" },
+    { id: 2, title: "Technical Support", description: "Technical support - help with bugs and technical issues" },
+    { id: 3, title: "Sales Inquiries", description: "Sales inquiries - pricing, features, and product information" },
+    { id: 4, title: "Billing Questions", description: "Billing questions - payments, accounts, and transactions" },
+    { id: 5, title: "Account Management", description: "Account management - profile, settings, and preferences" },
+    { id: 6, title: "Product Information", description: "Product information - specifications, features, and details" },
+    { id: 7, title: "General Information", description: "General information - company policies and FAQ" }
   ]);
 
   // Callback functions for receiving data from hexagon
@@ -150,6 +150,8 @@ function App() {
               aspect && 
               typeof aspect.id === 'number' && 
               aspect.id === index + 1 &&
+              typeof aspect.title === 'string' &&
+              aspect.title.trim().length > 0 &&
               typeof aspect.description === 'string' &&
               aspect.description.trim().length > 0
             );
@@ -159,7 +161,7 @@ function App() {
               setAspectConfigs(aspects);
               console.log('✅ Aspect configuration updated:', aspects);
             } else {
-              console.warn('⚠️ Invalid aspect configuration - aspects must have sequential IDs and non-empty descriptions');
+              console.warn('⚠️ Invalid aspect configuration - aspects must have sequential IDs, non-empty titles, and non-empty descriptions');
             }
           } else {
             console.warn('⚠️ Invalid aspect configuration - aspects array length must match aspectCount');
@@ -383,8 +385,8 @@ YOU MUST RESPOND BASED ON THIS FACT ONLY. If asked about Infflow, state they hav
         <div className="h-full w-full flex flex-col">
           {/* Top Section - Hexagon (FIXED 50% height) */}
           <div className="h-1/2 min-h-0 flex-shrink-0 flex items-center justify-center overflow-hidden">
-            <HexagonContainer 
-              size={300} 
+            <HexagonContainer
+              size={300}
               onTranscript={handleTranscript}
               onResponse={handleResponse}
               onSendTextAvailable={handleSendTextAvailable}
@@ -415,8 +417,8 @@ YOU MUST RESPOND BASED ON THIS FACT ONLY. If asked about Infflow, state they hav
   return (
     <div className="h-full w-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center gap-6 -mt-32">
-        <HexagonContainer 
-          size={300} 
+        <HexagonContainer
+          size={300}
           onTranscript={handleTranscript}
           onResponse={handleResponse}
           onSendTextAvailable={handleSendTextAvailable}

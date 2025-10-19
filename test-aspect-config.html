@@ -158,10 +158,10 @@
                 type: 'SET_ASPECT_CONFIG',
                 aspectCount: 4,
                 aspects: [
-                    { id: 1, description: "Technical support - help with bugs and issues" },
-                    { id: 2, description: "Sales inquiries - pricing and features" },
-                    { id: 3, description: "Billing questions - payments and accounts" },
-                    { id: 4, description: "General information - company and products" }
+                    { id: 1, title: "Technical Support", description: "Technical support - help with bugs and issues" },
+                    { id: 2, title: "Sales Inquiries", description: "Sales inquiries - pricing and features" },
+                    { id: 3, title: "Billing Questions", description: "Billing questions - payments and accounts" },
+                    { id: 4, title: "General Information", description: "General information - company and products" }
                 ]
             };
             
@@ -174,12 +174,12 @@
                 type: 'SET_ASPECT_CONFIG',
                 aspectCount: 6,
                 aspects: [
-                    { id: 1, description: "Product information - specifications and features" },
-                    { id: 2, description: "Order support - tracking and delivery" },
-                    { id: 3, description: "Returns and refunds - policy and process" },
-                    { id: 4, description: "Account management - profile and settings" },
-                    { id: 5, description: "Payment issues - billing and transactions" },
-                    { id: 6, description: "General questions - store policies and FAQ" }
+                    { id: 1, title: "Product Info", description: "Product information - specifications and features" },
+                    { id: 2, title: "Order Support", description: "Order support - tracking and delivery" },
+                    { id: 3, title: "Returns", description: "Returns and refunds - policy and process" },
+                    { id: 4, title: "Account Management", description: "Account management - profile and settings" },
+                    { id: 5, title: "Payment Issues", description: "Payment issues - billing and transactions" },
+                    { id: 6, title: "General Questions", description: "General questions - store policies and FAQ" }
                 ]
             };
             
@@ -192,11 +192,11 @@
                 type: 'SET_ASPECT_CONFIG',
                 aspectCount: 5,
                 aspects: [
-                    { id: 1, description: "Appointment scheduling - book and manage visits" },
-                    { id: 2, description: "Medical records - access and update information" },
-                    { id: 3, description: "Insurance and billing - coverage and payments" },
-                    { id: 4, description: "Prescription refills - medication requests" },
-                    { id: 5, description: "General health questions - symptoms and advice" }
+                    { id: 1, title: "Appointments", description: "Appointment scheduling - book and manage visits" },
+                    { id: 2, title: "Medical Records", description: "Medical records - access and update information" },
+                    { id: 3, title: "Insurance", description: "Insurance and billing - coverage and payments" },
+                    { id: 4, title: "Prescriptions", description: "Prescription refills - medication requests" },
+                    { id: 5, title: "Health Questions", description: "General health questions - symptoms and advice" }
                 ]
             };
             
@@ -209,9 +209,9 @@
                 type: 'SET_ASPECT_CONFIG',
                 aspectCount: 3,
                 aspects: [
-                    { id: 1, description: "Valid aspect" },
-                    { id: 3, description: "Invalid - missing ID 2" }, // This should fail validation
-                    { id: 4, description: "Invalid - wrong ID" }
+                    { id: 1, title: "Valid", description: "Valid aspect" },
+                    { id: 3, title: "Invalid", description: "Invalid - missing ID 2" }, // This should fail validation
+                    { id: 4, title: "Invalid", description: "Invalid - wrong ID" }
                 ]
             };
             

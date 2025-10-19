@@ -205,7 +205,7 @@ export const AnimatedHexagon: React.FC<AnimatedHexagonProps> = ({
           isVoiceDisabled
             ? 'Voice disabled - use toggle button to enable'
             : initializationState === 'ready' 
-              ? (isConnected ? 'Click to toggle voice recording' : 'Voice service not connected')
+              ? (isConnected ? 'Say something and I will respond' : 'Voice service not connected')
               : 'Voice system initializing...'
         }
       >

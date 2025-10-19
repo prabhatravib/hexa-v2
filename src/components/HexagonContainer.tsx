@@ -27,7 +27,7 @@ export const HexagonContainer: React.FC<HexagonContainerProps> = ({
   };
 
   return (
-    <div className={`flex flex-col items-center gap-4 ${className}`}>
+    <div className={`flex flex-col items-center gap-2 ${className}`}>
       {/* Primary Toggle Button - Always visible */}
       <motion.button
         onClick={toggleVoice}

@@ -21,7 +21,7 @@ interface ChatPanelProps {
   isAgentReady?: boolean;
   enhancedMode?: boolean; // Controls whether to show feature count buttons
   aspectCount?: number; // Number of aspect buttons to show (2-10, default 7)
-  aspectConfigs?: AspectConfig[]; // Configuration for aspect buttons with descriptions
+  aspectConfigs?: AspectConfig[]; // Configuration for aspect buttons with titles and descriptions
   isEmbedded?: boolean; // NEW: indicates if chat should use embedded layout
 }
 
@@ -29,6 +29,7 @@ type AspectNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 interface AspectConfig {
   id: number;
+  title: string;
   description: string;
 }
 
@@ -63,6 +64,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // ENHANCED MODE STATE - Dynamic aspect count
   const [activeAspect, setActiveAspect] = useState<AspectNumber>(1);
   const [hoveredAspect, setHoveredAspect] = useState<AspectNumber | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Initialize aspectMessages dynamically based on aspectCount
   const [aspectMessages, setAspectMessages] = useState<Record<AspectNumber, AspectMessages>>(() => {
@@ -97,11 +102,106 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const canSend = Boolean(onSendMessage) && !isVoiceDisabled && isAgentReady;
   const TEXT_TRANSCRIPT_IGNORE_MS = 3000;
 
-  // Helper function to get aspect description
+  // Helper function to get tooltip text (button number by default, external title when available)
+  const getTooltipText = (aspectNum: number): string => {
+    const config = aspectConfigs.find(config => config.id === aspectNum);
+    const result = config?.title || `${aspectNum}`;
+    console.log(`🔍 Tooltip for aspect ${aspectNum}:`, result, 'Config:', config);
+    return result;
+  };
+
+  // Helper function to get aspect description for context injection
   const getAspectDescription = (aspectNum: number): string => {
     const config = aspectConfigs.find(config => config.id === aspectNum);
     return config?.description || `Aspect ${aspectNum}`;
   };
+
+  // Smooth tooltip hover handlers
+  const handleMouseEnter = useCallback((aspectNum: AspectNumber, e: React.MouseEvent) => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    
+    console.log(`🖱️ Mouse enter aspect ${aspectNum}`);
+    setHoveredAspect(aspectNum);
+    
+    // Show tooltip immediately for smooth transition
+    setIsTooltipVisible(true);
+    
+    const position = calculateTooltipPosition(e.clientX, e.clientY);
+    setTooltipPosition(position);
+    setTooltipStyle({
+      left: position.x,
+      top: position.y,
+    });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    console.log(`🖱️ Mouse leave aspect`);
+    
+    // Add a small delay before hiding tooltip to prevent blinking
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsTooltipVisible(false);
+      // Clear hovered aspect after fade out completes
+      setTimeout(() => setHoveredAspect(null), 150);
+    }, 100);
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (hoveredAspect) {
+      const position = calculateTooltipPosition(e.clientX, e.clientY);
+      setTooltipPosition(position);
+      setTooltipStyle({
+        left: position.x,
+        top: position.y,
+      });
+    }
+  }, [hoveredAspect]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Function to calculate optimal tooltip position to stay within viewport
+  const calculateTooltipPosition = useCallback((mouseX: number, mouseY: number) => {
+    const tooltipWidth = 200; // Approximate tooltip width
+    const tooltipHeight = 40; // Approximate tooltip height
+    const offset = 10; // Distance from cursor
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let x = mouseX + offset;
+    let y = mouseY - tooltipHeight - offset;
+
+    // Adjust horizontal position if tooltip would overflow right edge
+    if (x + tooltipWidth > viewportWidth) {
+      x = mouseX - tooltipWidth - offset;
+    }
+
+    // Adjust vertical position if tooltip would overflow top edge
+    if (y < 0) {
+      y = mouseY + offset;
+    }
+
+    // Ensure tooltip doesn't go off the left edge
+    if (x < 0) {
+      x = offset;
+    }
+
+    // Ensure tooltip doesn't go off the bottom edge
+    if (y + tooltipHeight > viewportHeight) {
+      y = viewportHeight - tooltipHeight - offset;
+    }
+
+    return { x, y };
+  }, []);
 
   // Function to handle aspect switching with context injection
   const handleAspectSwitch = useCallback(async (aspectNum: AspectNumber) => {
@@ -402,14 +502,15 @@ Please tailor your responses to this specific context.
 
       {/* Aspect Selection Buttons - Only show in enhanced mode */}
       {enhancedMode && (
-        <div className="flex border-b border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-750 px-2 py-2 gap-1 overflow-x-auto relative">
+        <div className="flex border-b border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-750 py-2 justify-center gap-1 overflow-hidden relative">
           {Array.from({ length: aspectCount }, (_, i) => i + 1).map(aspectNum => (
             <div key={aspectNum} className="relative">
               <button
                 onClick={() => handleAspectSwitch(aspectNum as AspectNumber)}
-                onMouseEnter={() => setHoveredAspect(aspectNum as AspectNumber)}
-                onMouseLeave={() => setHoveredAspect(null)}
-                className={`flex-shrink-0 w-10 h-10 rounded-md text-sm font-semibold transition-all ${
+                onMouseEnter={(e) => handleMouseEnter(aspectNum as AspectNumber, e)}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                className={`w-10 h-10 rounded-md text-sm font-semibold transition-all ${
                   activeAspect === aspectNum
                     ? 'bg-blue-500 text-white shadow-md scale-105'
                     : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
@@ -419,14 +520,6 @@ Please tailor your responses to this specific context.
                 {aspectNum}
               </button>
               
-              {/* Tooltip */}
-              {hoveredAspect === aspectNum && (
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-md shadow-lg z-50 whitespace-nowrap max-w-xs">
-                  {getAspectDescription(aspectNum)}
-                  {/* Tooltip arrow pointing up */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-gray-900 dark:border-b-gray-700"></div>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -603,6 +696,21 @@ Please tailor your responses to this specific context.
             </div>
           )}
         </>
+      )}
+
+      {/* Cursor-following tooltip */}
+      {hoveredAspect && (
+        <div 
+          className={`fixed px-3 py-2 bg-gray-800 text-white text-sm rounded-md shadow-lg z-[9999] pointer-events-none whitespace-nowrap transition-opacity duration-150 ${
+            isTooltipVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={tooltipStyle}
+        >
+          {(() => {
+            console.log(`🎯 Rendering cursor tooltip for aspect ${hoveredAspect}`);
+            return getTooltipText(hoveredAspect);
+          })()}
+        </div>
       )}
     </motion.div>
   );

@@ -5,7 +5,8 @@
       "Bash(cat:*)",
       "Bash(npm run build:*)",
       "Bash(yarn build:worker:*)",
-      "Read(//c/Users/prabh/OneDrive/Documents/GitHub/Infflow-root/**)"
+      "Read(//c/Users/prabh/OneDrive/Documents/GitHub/Infflow-root/**)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

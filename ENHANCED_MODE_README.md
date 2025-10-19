@@ -41,15 +41,15 @@ iframe.contentWindow.postMessage({
 
 #### Advanced Aspect Configuration (New Feature)
 ```javascript
-// Parent website sends aspect configuration with descriptions
+// Parent website sends aspect configuration with titles and descriptions
 iframe.contentWindow.postMessage({
   type: 'SET_ASPECT_CONFIG',
   aspectCount: 4,
   aspects: [
-    { id: 1, description: "Technical support - help with bugs and issues" },
-    { id: 2, description: "Sales inquiries - pricing and features" },
-    { id: 3, description: "Billing questions - payments and accounts" },
-    { id: 4, description: "General information - company and products" }
+    { id: 1, title: "Technical Support", description: "Technical support - help with bugs and issues" },
+    { id: 2, title: "Sales Inquiries", description: "Sales inquiries - pricing and features" },
+    { id: 3, title: "Billing Questions", description: "Billing questions - payments and accounts" },
+    { id: 4, title: "General Information", description: "General information - company and products" }
   ]
 }, 'https://hexa-worker.prabhatravib.workers.dev');
 ```
@@ -68,7 +68,7 @@ iframe.contentWindow.postMessage({
     - Aspect count is validated (2-10 range) with fallback to default (7)
     - Aspect configurations are validated for sequential IDs and non-empty descriptions
   6. **Context Injection**: Automatic injection of aspect context into voice sessions when switching aspects
-  7. **Tooltip System**: CSS-based tooltips showing aspect descriptions on hover
+  7. **Tooltip System**: CSS-based tooltips showing aspect titles on hover
 
   ## Features
 
@@ -87,7 +87,7 @@ iframe.contentWindow.postMessage({
 
   ### Tooltip Behavior
   - **Hover Activation**: Tooltips appear when hovering over aspect buttons
-  - **Description Display**: Shows custom descriptions or fallback "Aspect N" text
+  - **Description Display**: Shows custom titles or fallback "Aspect N" text
   - **Positioning**: Tooltips appear above buttons with arrow indicators
   - **Styling**: Dark background with white text, rounded corners, shadow
   - **Responsive**: Tooltips adapt to content length with max-width constraints
@@ -98,7 +98,7 @@ iframe.contentWindow.postMessage({
   - **Single Row Layout**: All buttons fit in one row regardless of count
   - **Real-time Updates**: Buttons update immediately when count changes
   - **State Preservation**: Existing messages are preserved when count changes
-  - **Description Support**: Buttons can display custom descriptions via tooltips
+  - **Description Support**: Buttons can display custom titles via tooltips
   - **Context Awareness**: Each button can inject specific context into voice sessions
 
   ### Context Injection System
@@ -446,14 +446,15 @@ interface SetAspectConfigMessage {
   aspectCount: number; // 2-10 range
   aspects: Array<{
     id: number; // Must be sequential (1, 2, 3, ...)
-    description: string; // Non-empty description for tooltip
+    title: string; // Non-empty title for tooltip
+    description: string; // Non-empty description for context injection
   }>;
 }
 ```
 
 #### Response Behavior
 - **Valid Count (2-10)**: Updates aspect count immediately
-- **Valid Configuration**: Updates both count and aspect descriptions
+- **Valid Configuration**: Updates both count and aspect titles/descriptions
 - **Invalid Count (< 2 or > 10)**: Ignores message, maintains current count
 - **Invalid Configuration**: Ignores message, logs warning
 - **No Response**: Messages are one-way communication
