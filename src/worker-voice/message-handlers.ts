@@ -170,7 +170,20 @@ export class MessageHandlers {
   async handleTextInput(text: string, sessionId: string): Promise<void> {
     console.log('📝 Processing text input:', text);
     console.log('📝 Current external data context:', this.currentExternalData);
-    
+
+    // NEW: Detect aspect focus requests from voice input
+    const aspectNumber = this.detectAspectFocusRequest(text);
+    if (aspectNumber) {
+      console.log(`🎯 Voice aspect focus request detected: aspect ${aspectNumber}`);
+      this.broadcastToClients({
+        type: 'ASPECT_FOCUS_REQUEST',
+        aspectId: aspectNumber,
+        source: 'voice',
+        text: text,
+        timestamp: Date.now()
+      });
+    }
+
     // Check if OpenAI connection is available
     if (!this.openaiConnection) {
       console.error('❌ OpenAI connection not available');
@@ -389,7 +402,23 @@ export class MessageHandlers {
               this.sendCollectedEmail();
             }
           }
-          
+
+          // NEW: Detect aspect focus requests from voice input
+          console.log('🔍 Checking voice input for aspect patterns:', message.transcript);
+          const aspectNumber = this.detectAspectFocusRequest(message.transcript);
+          if (aspectNumber) {
+            console.log(`🎯 Voice aspect focus request detected: aspect ${aspectNumber}`);
+            this.broadcastToClients({
+              type: 'ASPECT_FOCUS_REQUEST',
+              aspectId: aspectNumber,
+              source: 'voice',
+              text: message.transcript,
+              timestamp: Date.now()
+            });
+          } else {
+            console.log('❌ No aspect pattern matched in voice input');
+          }
+
           this.broadcastToClients({
             type: 'transcription',
             text: message.transcript
@@ -466,4 +495,118 @@ export class MessageHandlers {
       console.error('Failed to parse OpenAI message:', error);
     }
   }
+
+  private isValidAspectNumber(value: number | undefined | null): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 10;
+  }
+
+  private parseAspectCandidate(value: string | undefined): number | null {
+    if (!value) return null;
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return null;
+
+    const numericCandidate = normalized.replace(/(st|nd|rd|th)$/, '');
+    if (/^\d{1,2}$/.test(numericCandidate)) {
+      const parsed = parseInt(numericCandidate, 10);
+      if (this.isValidAspectNumber(parsed)) {
+        return parsed;
+      }
+    }
+
+    const ordinalNumber = this.ordinalToNumber(normalized);
+    return this.isValidAspectNumber(ordinalNumber) ? ordinalNumber : null;
+  }
+
+  private ordinalToNumber(ordinal: string): number | null {
+    const normalized = ordinal.trim().toLowerCase();
+    const ordinalMap: Record<string, number> = {
+      'first': 1, 'one': 1,
+      'second': 2, 'two': 2,
+      'third': 3, 'three': 3,
+      'fourth': 4, 'four': 4,
+      'fifth': 5, 'five': 5,
+      'sixth': 6, 'six': 6,
+      'seventh': 7, 'seven': 7,
+      'eighth': 8, 'eight': 8,
+      'ninth': 9, 'nine': 9,
+      'tenth': 10, 'ten': 10,
+    };
+    const value = ordinalMap[normalized];
+    return this.isValidAspectNumber(value) ? value : null;
+  }
+
+  // NEW: Enhanced aspect detection function
+  private detectAspectFocusRequest(text: string): number | null {
+    const lowerText = text.toLowerCase();
+    const logPrefix = '[aspect-detect]';
+    console.log(logPrefix, 'testing', lowerText);
+
+    const hasAspectKeyword = /\b(aspect|button|topic|context)\b/i.test(lowerText);
+
+    const explicitNumberPatterns = [
+      /(?:focus|switch|change|move|go|jump|shift)\s+(?:to\s+)?(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:show|open|display)\s+(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:select|choose|highlight|activate)\s+(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:aspect|button)\s+number\s*(\d{1,2})/i,
+      /number\s*(\d{1,2})\s+(?:aspect|button)/i,
+    ];
+
+    for (const pattern of explicitNumberPatterns) {
+      const match = pattern.exec(lowerText);
+      if (match) {
+        const aspectNumber = this.parseAspectCandidate(match[1]);
+        if (aspectNumber) {
+          console.log(logPrefix, 'explicit match', { pattern: match[0], aspectNumber });
+          return aspectNumber;
+        }
+      }
+    }
+
+    const ordinalCapture = '(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)';
+    const ordinalPatterns = [
+      new RegExp(`(?:focus|switch|change|move|go|talk|discuss|speak)(?:\\s+(?:about|on|to))?\\s+(?:the\\s+)?${ordinalCapture}(?:\\s+(?:aspect|button|topic|thing|item|one))?`, 'i'),
+      new RegExp(`(?:select|choose|highlight|activate)\\s+(?:the\\s+)?${ordinalCapture}(?:\\s+(?:aspect|button|option|one|thing|item))?`, 'i'),
+      new RegExp(`(?:aspect|button|topic)\\s+${ordinalCapture}`, 'i'),
+      new RegExp(`(?:the\\s+)?${ordinalCapture}\\s+(?:aspect|button|topic|one|thing|item)`, 'i'),
+      new RegExp(`(?:let's|can we|shall we|i want to)\\s+(?:discuss|talk about|focus on|move to|switch to)\\s+(?:the\\s+)?${ordinalCapture}(?:\\s+(?:aspect|button|topic|thing|item|one))?`, 'i'),
+      new RegExp(`aspect\\s+${ordinalCapture}`, 'i'),
+    ];
+
+    for (const pattern of ordinalPatterns) {
+      const match = pattern.exec(lowerText);
+      if (match) {
+        const aspectNumber = this.parseAspectCandidate(match[1]);
+        if (aspectNumber && (hasAspectKeyword || /aspect|button|topic/.test(pattern.source))) {
+          console.log(logPrefix, 'ordinal match', { pattern: match[0], aspectNumber });
+          return aspectNumber;
+        }
+      }
+    }
+
+    if (hasAspectKeyword) {
+      const contextPatterns = [
+        new RegExp(`^(?:the\\s+)?${ordinalCapture}(?:\\s+(?:one|option))?$`, 'i'),
+        new RegExp(`${ordinalCapture}\\s+(?:one|option|choice)`, 'i'),
+        /number\s*(\d{1,2})/i,
+        /option\s*(\d{1,2})/i,
+      ];
+
+      for (const pattern of contextPatterns) {
+        const match = pattern.exec(lowerText);
+        if (match) {
+          const aspectNumber = this.parseAspectCandidate(match[1]);
+          if (aspectNumber) {
+            console.log(logPrefix, 'context match', { pattern: match[0], aspectNumber });
+            return aspectNumber;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+
 }

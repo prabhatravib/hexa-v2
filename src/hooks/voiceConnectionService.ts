@@ -480,6 +480,32 @@ export const useVoiceConnectionService = ({
               console.log('🖼️ External image available for voice context:', d.dataType);
               setExternalData((prev) => (prev ? { ...prev, image: d.image, type: d.dataType } : { image: d.image, type: d.dataType }));
             },
+            ASPECT_FOCUS_REQUEST: (d) => {
+              const { aspectId, source, text } = d;
+              const numericAspectId = typeof aspectId === 'string' ? parseInt(aspectId, 10) : aspectId;
+
+              if (!Number.isFinite(numericAspectId)) {
+                console.warn('🎯 Ignoring aspect focus request with invalid aspectId:', aspectId, d);
+                return;
+              }
+
+              console.log('🎯 Voice aspect focus request received:', {
+                aspectId: numericAspectId,
+                source,
+                text
+              });
+
+              // Trigger aspect switching through the existing system
+              // We need to dispatch a custom event that the AspectSelector can listen to
+              window.dispatchEvent(new CustomEvent('voice-aspect-focus', {
+                detail: { aspectId: numericAspectId, source, text }
+              }));
+
+              // Also try to call the aspect switching function if it's available globally
+              if ((window as any).handleAspectSwitch) {
+                (window as any).handleAspectSwitch(numericAspectId);
+              }
+            },
             __default: (d) => {
               console.log('Unknown message type:', d.type, d);
             },

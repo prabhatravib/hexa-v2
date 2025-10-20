@@ -1,16 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnimationStore } from '@/store/animationStore';
-import { injectExternalContext } from '@/lib/externalContext';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  timestamp: Date;
-  type: 'voice' | 'text';
-  source: 'voice' | 'text'; // Add source tracking
-}
+import { MessageBubble, Message } from './MessageBubble';
+import { AspectSelector, AspectConfig } from './AspectSelector';
+import { updateAspectContext } from '@/lib/externalContext';
 
 interface ChatPanelProps {
   transcript: string | null;
@@ -26,12 +19,6 @@ interface ChatPanelProps {
 }
 
 type AspectNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
-
-interface AspectConfig {
-  id: number;
-  title: string;
-  description: string;
-}
 
 interface AspectMessages {
   voice: Message[];
@@ -51,7 +38,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   isEmbedded = false // NEW: Default to false for backward compatibility
 }) => {
   const [activeTab, setActiveTab] = useState<'voice' | 'text'>('voice');
-  const [responseDestination, setResponseDestination] = useState<'voice' | 'text'>('voice');
   const [voiceMessages, setVoiceMessages] = useState<Message[]>([]);
   const [textMessages, setTextMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
@@ -59,172 +45,88 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingTextMessagesRef = useRef<Array<{ text: string; expiresAt: number }>>([]);
+  const responseContextMap = useRef<Map<string, 'voice' | 'text'>>(new Map());
+  const recentResponses = useRef<Set<string>>(new Set());
   const { voiceState, isVoiceDisabled } = useAnimationStore();
 
-  // ENHANCED MODE STATE - Dynamic aspect count
+  // ENHANCED MODE STATE - Simple single panel approach
   const [activeAspect, setActiveAspect] = useState<AspectNumber>(1);
-  const [hoveredAspect, setHoveredAspect] = useState<AspectNumber | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
-  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Initialize aspectMessages dynamically based on aspectCount
-  const [aspectMessages, setAspectMessages] = useState<Record<AspectNumber, AspectMessages>>(() => {
-    const messages: Record<AspectNumber, AspectMessages> = {} as Record<AspectNumber, AspectMessages>;
-    for (let i = 1; i <= aspectCount; i++) {
-      messages[i as AspectNumber] = { voice: [], text: [] };
-    }
-    return messages;
-  });
-  
-  const [isProcessingTextMessage, setIsProcessingTextMessage] = useState(false);
+  const [currentContext, setCurrentContext] = useState<string>('');
 
-  // Update aspectMessages when aspectCount changes
-  useEffect(() => {
-    setAspectMessages(prev => {
-      const newMessages: Record<AspectNumber, AspectMessages> = {} as Record<AspectNumber, AspectMessages>;
-      
-      // Preserve existing messages for aspects that still exist
-      for (let i = 1; i <= aspectCount; i++) {
-        newMessages[i as AspectNumber] = prev[i as AspectNumber] || { voice: [], text: [] };
-      }
-      
-      return newMessages;
-    });
-    
-    // Reset activeAspect if it's beyond the new count
-    if (activeAspect > aspectCount) {
-      setActiveAspect(1);
-    }
-  }, [aspectCount, activeAspect]);
+  // Single unified message arrays (not per-aspect) - using the same variables declared above
+
+  const [isProcessingTextMessage, setIsProcessingTextMessage] = useState(false);
 
   const canSend = Boolean(onSendMessage) && !isVoiceDisabled && isAgentReady;
   const TEXT_TRANSCRIPT_IGNORE_MS = 3000;
 
-  // Helper function to get tooltip text (button number by default, external title when available)
-  const getTooltipText = (aspectNum: number): string => {
-    const config = aspectConfigs.find(config => config.id === aspectNum);
-    const result = config?.title || `${aspectNum}`;
-    console.log(`🔍 Tooltip for aspect ${aspectNum}:`, result, 'Config:', config);
-    return result;
-  };
-
-  // Helper function to get aspect description for context injection
-  const getAspectDescription = (aspectNum: number): string => {
-    const config = aspectConfigs.find(config => config.id === aspectNum);
-    return config?.description || `Aspect ${aspectNum}`;
-  };
-
-  // Smooth tooltip hover handlers
-  const handleMouseEnter = useCallback((aspectNum: AspectNumber, e: React.MouseEvent) => {
-    // Clear any existing timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    
-    console.log(`🖱️ Mouse enter aspect ${aspectNum}`);
-    setHoveredAspect(aspectNum);
-    
-    // Show tooltip immediately for smooth transition
-    setIsTooltipVisible(true);
-    
-    const position = calculateTooltipPosition(e.clientX, e.clientY);
-    setTooltipPosition(position);
-    setTooltipStyle({
-      left: position.x,
-      top: position.y,
-    });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    console.log(`🖱️ Mouse leave aspect`);
-    
-    // Add a small delay before hiding tooltip to prevent blinking
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsTooltipVisible(false);
-      // Clear hovered aspect after fade out completes
-      setTimeout(() => setHoveredAspect(null), 150);
-    }, 100);
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (hoveredAspect) {
-      const position = calculateTooltipPosition(e.clientX, e.clientY);
-      setTooltipPosition(position);
-      setTooltipStyle({
-        left: position.x,
-        top: position.y,
-      });
-    }
-  }, [hoveredAspect]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Function to calculate optimal tooltip position to stay within viewport
-  const calculateTooltipPosition = useCallback((mouseX: number, mouseY: number) => {
-    const tooltipWidth = 200; // Approximate tooltip width
-    const tooltipHeight = 40; // Approximate tooltip height
-    const offset = 10; // Distance from cursor
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let x = mouseX + offset;
-    let y = mouseY - tooltipHeight - offset;
-
-    // Adjust horizontal position if tooltip would overflow right edge
-    if (x + tooltipWidth > viewportWidth) {
-      x = mouseX - tooltipWidth - offset;
-    }
-
-    // Adjust vertical position if tooltip would overflow top edge
-    if (y < 0) {
-      y = mouseY + offset;
-    }
-
-    // Ensure tooltip doesn't go off the left edge
-    if (x < 0) {
-      x = offset;
-    }
-
-    // Ensure tooltip doesn't go off the bottom edge
-    if (y + tooltipHeight > viewportHeight) {
-      y = viewportHeight - tooltipHeight - offset;
-    }
-
-    return { x, y };
-  }, []);
-
-  // Function to handle aspect switching with context injection
-  const handleAspectSwitch = useCallback(async (aspectNum: AspectNumber) => {
+  // Simple aspect switching - just changes context, not messages
+  const handleAspectSwitch = useCallback((aspectNum: AspectNumber) => {
+    console.log(`🔄 Switching to aspect ${aspectNum}`);
     setActiveAspect(aspectNum);
-    
-    // Inject context for the new aspect
-    const description = getAspectDescription(aspectNum);
-    const contextMessage = `=== CONVERSATION CONTEXT ===
-You are now in a conversation focused on: ${description}
-Please tailor your responses to this specific context.
-===========================`;
-    
-    try {
-      await injectExternalContext({ text: contextMessage });
-      console.log(`✅ Context injected for aspect ${aspectNum}:`, description);
-    } catch (error) {
-      console.warn(`⚠️ Failed to inject context for aspect ${aspectNum}:`, error);
+    // Update context for the AI, but don't change message display
+    const aspectData = aspectConfigs.find(config => config.id === aspectNum);
+    if (!aspectData || !aspectData.description?.trim()) {
+      console.warn(`Invalid aspect data for ID ${aspectNum} - skipping update`);
+      return; // Prevent sending empty messages
     }
+    setCurrentContext(`Currently focused on: ${aspectData.title} - ${aspectData.description}`);
+
+    // Inject context for voice-triggered aspect changes (replaces all other contexts)
+    const contextMessage = `=== ACTIVE CONVERSATION ASPECT ===
+Current focus: ${aspectData.description}
+
+This is your current conversation context. Respond based on this aspect focus.
+Previous contexts are cleared when switching aspects.
+===========================`;
+
+    updateAspectContext(contextMessage)
+      .then((applied) => {
+        const status = applied ? 'applied' : 'queued';
+        console.log(`[aspect-context] ${status} aspect ${aspectNum}:`, aspectData.title);
+      })
+      .catch(error => {
+        console.warn(`[aspect-context] failed to update aspect ${aspectNum} context`, error);
+      });
   }, [aspectConfigs]);
 
-  // Choose message handling based on mode
-  const currentVoiceMessages = enhancedMode ? aspectMessages[activeAspect]?.voice || [] : voiceMessages;
-  const currentTextMessages = enhancedMode ? aspectMessages[activeAspect]?.text || [] : textMessages;
+  // Expose aspect switching function globally for voice detection
+  useEffect(() => {
+    (window as any).handleAspectSwitch = handleAspectSwitch;
+    return () => {
+      delete (window as any).handleAspectSwitch;
+    };
+  }, [aspectCount, handleAspectSwitch]);
+
+  // Listen for voice aspect focus events as a fallback
+  useEffect(() => {
+    const handleVoiceAspectFocus = (event: CustomEvent) => {
+      const { aspectId, source, text } = event.detail as { aspectId: number | string; source: string; text: string };
+      const numericAspect = typeof aspectId === 'string' ? parseInt(aspectId, 10) : aspectId;
+
+      if (!Number.isFinite(numericAspect)) {
+        console.warn('[aspect-context] Ignoring invalid aspect focus event', { aspectId, source, text });
+        return;
+      }
+
+      if (numericAspect < 1 || numericAspect > aspectCount) {
+        console.warn('[aspect-context] Ignoring out-of-range aspect focus event', { numericAspect, aspectCount });
+        return;
+      }
+
+      console.log(`🎯 Voice aspect focus event received: aspect ${numericAspect} from ${source}`);
+      handleAspectSwitch(numericAspect as AspectNumber);
+    };
+
+    window.addEventListener('voice-aspect-focus', handleVoiceAspectFocus as EventListener);
+    return () => {
+      window.removeEventListener('voice-aspect-focus', handleVoiceAspectFocus as EventListener);
+    };
+  }, [handleAspectSwitch]);
+
+  // Use the same messages regardless of aspect (single panel)
+  const currentVoiceMessages = voiceMessages;
+  const currentTextMessages = textMessages;
 
   useEffect(() => {
     if (!transcript) {
@@ -252,8 +154,9 @@ Please tailor your responses to this specific context.
 
     // Only add to voice messages if this is NOT from a text message we just sent
     if (!isProcessingTextMessage) {
+      const messageId = `user-${Date.now()}`;
       const newMessage: Message = {
-        id: `user-${Date.now()}`,
+        id: messageId,
         role: 'user',
         text: normalizedTranscript,
         timestamp: new Date(),
@@ -261,55 +164,77 @@ Please tailor your responses to this specific context.
         source: 'voice'
       };
 
-      if (enhancedMode) {
-        setAspectMessages(prev => ({
-          ...prev,
-          [activeAspect]: {
-            ...prev[activeAspect],
-            voice: [...prev[activeAspect].voice, newMessage]
-          }
-        }));
-      } else {
-        setVoiceMessages(prev => [...prev, newMessage]);
+      // Add to single unified voice messages (not per-aspect)
+      setVoiceMessages(prev => [...prev, newMessage]);
+
+      // Store expected context for the next response triggered by this voice input
+      // Use a timestamp-based key to track the expected response
+      const responseKey = `voice-${Date.now()}`;
+      responseContextMap.current.set(responseKey, 'voice');
+      
+      // Clean up old entries (keep only last 10)
+      if (responseContextMap.current.size > 10) {
+        const firstKey = responseContextMap.current.keys().next().value;
+        if (firstKey) {
+          responseContextMap.current.delete(firstKey);
+        }
       }
-      setResponseDestination('voice');
     }
-  }, [transcript, isProcessingTextMessage, enhancedMode, activeAspect]);
+  }, [transcript, isProcessingTextMessage]);
 
   useEffect(() => {
     if (response && response.trim()) {
-      // Capture responseDestination at the time response arrives to prevent re-runs
-      const currentDestination = responseDestination;
+      // Check for duplicate responses
+      const responseHash = response.trim();
+      if (recentResponses.current.has(responseHash)) {
+        return; // Skip duplicate response
+      }
+      recentResponses.current.add(responseHash);
+      
+      // Clean up old responses (keep only last 20)
+      if (recentResponses.current.size > 20) {
+        const firstResponse = recentResponses.current.values().next().value;
+        if (firstResponse) {
+          recentResponses.current.delete(firstResponse);
+        }
+      }
+
+      // Determine context for this response
+      // Look for the most recent context in the map
+      let responseContext: 'voice' | 'text' = 'voice'; // Default fallback
+      
+      // Get the most recent context from the map
+      const contexts = Array.from(responseContextMap.current.values());
+      if (contexts.length > 0) {
+        responseContext = contexts[contexts.length - 1]; // Use most recent
+        // Remove the used context to prevent reuse
+        const keys = Array.from(responseContextMap.current.keys());
+        if (keys.length > 0) {
+          responseContextMap.current.delete(keys[keys.length - 1]);
+        }
+      }
+
       const newMessage: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         text: response,
         timestamp: new Date(),
-        type: currentDestination,
-        source: currentDestination // Assistant messages inherit the source from their destination
+        type: responseContext,
+        source: responseContext // Assistant messages inherit the source from their conversation context
       };
 
-      if (enhancedMode) {
-        setAspectMessages(prev => ({
-          ...prev,
-          [activeAspect]: {
-            ...prev[activeAspect],
-            [currentDestination]: [...prev[activeAspect][currentDestination], newMessage]
-          }
-        }));
+      // Add to single unified message arrays (not per-aspect)
+      if (responseContext === 'voice') {
+        setVoiceMessages(prev => [...prev, newMessage]);
       } else {
-        if (currentDestination === 'voice') {
-          setVoiceMessages(prev => [...prev, newMessage]);
-        } else {
-          setTextMessages(prev => [...prev, newMessage]);
-        }
+        setTextMessages(prev => [...prev, newMessage]);
       }
     }
-  }, [response, responseDestination, enhancedMode, activeAspect]);
+  }, [response]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeTab === 'voice' ? currentVoiceMessages : currentTextMessages]);
+  }, [currentVoiceMessages, currentTextMessages, activeTab]);
 
   useEffect(() => {
     if (errorMessage && draft.length === 0) {
@@ -344,7 +269,18 @@ Please tailor your responses to this specific context.
           text: trimmed,
           expiresAt: Date.now() + TEXT_TRANSCRIPT_IGNORE_MS
         });
-        setResponseDestination('text');
+
+        // Store expected context for the response triggered by this text message
+        const responseKey = `text-${Date.now()}`;
+        responseContextMap.current.set(responseKey, 'text');
+        
+        // Clean up old entries (keep only last 10)
+        if (responseContextMap.current.size > 10) {
+          const firstKey = responseContextMap.current.keys().next().value;
+          if (firstKey) {
+            responseContextMap.current.delete(firstKey);
+          }
+        }
 
         // Add user message to text messages with source tracking
         const userMessage: Message = {
@@ -356,17 +292,8 @@ Please tailor your responses to this specific context.
           source: 'text'
         };
 
-        if (enhancedMode) {
-          setAspectMessages(prev => ({
-            ...prev,
-            [activeAspect]: {
-              ...prev[activeAspect],
-              text: [...prev[activeAspect].text, userMessage]
-            }
-          }));
-        } else {
-          setTextMessages(prev => [...prev, userMessage]);
-        }
+        // Add to single unified text messages (not per-aspect)
+        setTextMessages(prev => [...prev, userMessage]);
         setDraft('');
       } else {
         setErrorMessage('Message could not be delivered');
@@ -379,7 +306,7 @@ Please tailor your responses to this specific context.
       // Reset the flag after a short delay to ensure transcript processing is complete
       setTimeout(() => setIsProcessingTextMessage(false), 100);
     }
-  }, [draft, onSendMessage, canSend, isProcessingTextMessage, enhancedMode, activeAspect]);
+  }, [draft, onSendMessage, canSend, isProcessingTextMessage, enhancedMode, isAgentReady, isVoiceDisabled]);
 
   const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -394,34 +321,19 @@ Please tailor your responses to this specific context.
   }, [sendMessage]);
 
   const clearAllAspects = useCallback(() => {
-    if (enhancedMode) {
-      const newMessages: Record<AspectNumber, AspectMessages> = {} as Record<AspectNumber, AspectMessages>;
-      for (let i = 1; i <= aspectCount; i++) {
-        newMessages[i as AspectNumber] = { voice: [], text: [] };
-      }
-      setAspectMessages(newMessages);
-    } else {
-      setVoiceMessages([]);
-      setTextMessages([]);
-    }
-  }, [enhancedMode, aspectCount]);
+    // Simple clear - just clear all messages since it's one panel
+    setVoiceMessages([]);
+    setTextMessages([]);
+  }, []);
 
   // Legacy clear functions for backward compatibility
   const clearVoiceMessages = useCallback(() => {
-    if (enhancedMode) {
-      clearAllAspects();
-    } else {
-      setVoiceMessages([]);
-    }
-  }, [enhancedMode, clearAllAspects]);
+    setVoiceMessages([]);
+  }, []);
 
   const clearTextMessages = useCallback(() => {
-    if (enhancedMode) {
-      clearAllAspects();
-    } else {
-      setTextMessages([]);
-    }
-  }, [enhancedMode, clearAllAspects]);
+    setTextMessages([]);
+  }, []);
 
   const statusText = errorMessage
     ? errorMessage
@@ -438,7 +350,7 @@ Please tailor your responses to this specific context.
               : voiceState === 'error'
                 ? 'Error'
                 : enhancedMode
-                  ? 'Enhanced Mode - Ready'
+                  ? 'Ready'
                   : 'Ready';
 
   const computedRows = Math.min(4, Math.max(2, draft.split(/\r?\n/).length));
@@ -500,30 +412,13 @@ Please tailor your responses to this specific context.
         </button>
       </div>
 
-      {/* Aspect Selection Buttons - Only show in enhanced mode */}
-      {enhancedMode && (
-        <div className="flex border-b border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-750 py-2 justify-center gap-1 overflow-hidden relative">
-          {Array.from({ length: aspectCount }, (_, i) => i + 1).map(aspectNum => (
-            <div key={aspectNum} className="relative">
-              <button
-                onClick={() => handleAspectSwitch(aspectNum as AspectNumber)}
-                onMouseEnter={(e) => handleMouseEnter(aspectNum as AspectNumber, e)}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                className={`w-10 h-10 rounded-md text-sm font-semibold transition-all ${
-                  activeAspect === aspectNum
-                    ? 'bg-blue-500 text-white shadow-md scale-105'
-                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600'
-                }`}
-                aria-label={`Aspect ${aspectNum}`}
-              >
-                {aspectNum}
-              </button>
-              
-            </div>
-          ))}
-        </div>
-      )}
+      <AspectSelector
+        enhancedMode={enhancedMode}
+        aspectCount={aspectCount}
+        activeAspect={activeAspect}
+        onAspectSwitch={handleAspectSwitch}
+        aspectConfigs={aspectConfigs}
+      />
 
       {/* Content Area - Only show when not minimized or when embedded */}
       {(!isMinimized || isEmbedded) && (
@@ -537,48 +432,9 @@ Please tailor your responses to this specific context.
                   </div>
                 )}
 
-                {currentVoiceMessages.map((message) => {
-                  const isUserMessage = message.role === 'user';
-                  const isVoiceInput = message.type === 'voice' && message.source === 'voice';
-                  const isTextInput = message.type === 'text' && message.source === 'text';
-
-                  let bubbleClasses = '';
-                  let timestampClasses = '';
-
-                  if (isUserMessage) {
-                    // User messages: green for text input, blue for voice input
-                    if (isTextInput) {
-                      bubbleClasses = 'bg-green-500 text-white';
-                      timestampClasses = 'text-green-100';
-                    } else if (isVoiceInput) {
-                      bubbleClasses = 'bg-blue-500 text-white';
-                      timestampClasses = 'text-blue-100';
-                    } else {
-                      bubbleClasses = 'bg-blue-500 text-white';
-                      timestampClasses = 'text-blue-100';
-                    }
-                  } else {
-                    // Assistant messages: gray
-                    bubbleClasses = 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
-                    timestampClasses = 'text-gray-500 dark:text-gray-400';
-                  }
-
-                  return (
-                    <motion.div
-                      key={message.id}
-                      initial={{ opacity: 0, x: isUserMessage ? 20 : -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[80%] px-4 py-2 rounded-lg ${bubbleClasses}`}>
-                        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                        <p className={`text-[8px] mt-1 font-normal leading-tight ${timestampClasses}`}>
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {currentVoiceMessages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))}
               </>
             ) : (
               <>
@@ -588,48 +444,9 @@ Please tailor your responses to this specific context.
                   </div>
                 )}
 
-                {currentTextMessages.map((message) => {
-                  const isUserMessage = message.role === 'user';
-                  const isVoiceInput = message.type === 'voice' && message.source === 'voice';
-                  const isTextInput = message.type === 'text' && message.source === 'text';
-
-                  let bubbleClasses = '';
-                  let timestampClasses = '';
-
-                  if (isUserMessage) {
-                    // User messages: green for text input, blue for voice input
-                    if (isTextInput) {
-                      bubbleClasses = 'bg-green-500 text-white';
-                      timestampClasses = 'text-green-100';
-                    } else if (isVoiceInput) {
-                      bubbleClasses = 'bg-blue-500 text-white';
-                      timestampClasses = 'text-blue-100';
-                    } else {
-                      bubbleClasses = 'bg-blue-500 text-white';
-                      timestampClasses = 'text-blue-100';
-                    }
-                  } else {
-                    // Assistant messages: gray
-                    bubbleClasses = 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
-                    timestampClasses = 'text-gray-500 dark:text-gray-400';
-                  }
-
-                  return (
-                    <motion.div
-                      key={message.id}
-                      initial={{ opacity: 0, x: isUserMessage ? 20 : -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[80%] px-4 py-2 rounded-lg ${bubbleClasses}`}>
-                        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                        <p className={`text-[8px] mt-1 font-normal leading-tight ${timestampClasses}`}>
-                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {currentTextMessages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))}
               </>
             )}
 
@@ -669,7 +486,7 @@ Please tailor your responses to this specific context.
                 </span>
                 <button
                   type="button"
-                  onClick={() => enhancedMode ? clearAllAspects() : setTextMessages([])}
+                  onClick={clearAllAspects}
                   className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   Clear
@@ -687,7 +504,7 @@ Please tailor your responses to this specific context.
                 </span>
                 <button
                   type="button"
-                  onClick={() => enhancedMode ? clearAllAspects() : setVoiceMessages([])}
+                  onClick={clearAllAspects}
                   className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   Clear
@@ -698,20 +515,6 @@ Please tailor your responses to this specific context.
         </>
       )}
 
-      {/* Cursor-following tooltip */}
-      {hoveredAspect && (
-        <div 
-          className={`fixed px-3 py-2 bg-gray-800 text-white text-sm rounded-md shadow-lg z-[9999] pointer-events-none whitespace-nowrap transition-opacity duration-150 ${
-            isTooltipVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={tooltipStyle}
-        >
-          {(() => {
-            console.log(`🎯 Rendering cursor tooltip for aspect ${hoveredAspect}`);
-            return getTooltipText(hoveredAspect);
-          })()}
-        </div>
-      )}
     </motion.div>
   );
 };

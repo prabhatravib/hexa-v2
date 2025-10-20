@@ -26,15 +26,29 @@ export function stripCodeFences(raw: string): string {
 let activeSession: any = null;
 let baseInstructions = '';
 let lastInjectedHash = '';
+let lastAspectContextId: string | null = null;
+let pendingAspectContext: string | null = null;
 
 export function setActiveSession(session: any) {
   activeSession = session;
-  (window as any).activeSession = session; // ← important
+  (window as any).activeSession = session; // important
   lastInjectedHash = '';
+  lastAspectContextId = null;
+
   const pending = (window as any).__pendingExternalContext;
   if (pending) {
     (window as any).__pendingExternalContext = null;
     injectExternalContext(pending); // fire-and-forget
+  }
+
+  const pendingAspect =
+    (window as any).__pendingAspectContext ??
+    pendingAspectContext;
+
+  if (pendingAspect) {
+    (window as any).__pendingAspectContext = null;
+    pendingAspectContext = null;
+    updateAspectContext(pendingAspect); // fire-and-forget
   }
 }
 
@@ -93,6 +107,7 @@ export async function injectGlobalExternalData() {
 
 export function clearActiveSession() {
   activeSession = null;
+  lastAspectContextId = null;
 }
 
 export function injectCurrentExternalData() {
@@ -164,6 +179,78 @@ export async function injectExternalContext(data: { text: string } | string): Pr
   }
 }
 
+export async function updateAspectContext(raw: string): Promise<boolean> {
+  const stripped = stripCodeFences(raw);
+  if (!stripped) {
+    console.log('[aspect-context] no aspect context provided');
+    return false;
+  }
+
+  if (!isRealtimeReady()) {
+    console.log('[aspect-context] session not ready, queueing update');
+    pendingAspectContext = stripped;
+    (window as any).__pendingAspectContext = stripped;
+    return false;
+  }
+
+  const session = (window as any).activeSession || activeSession;
+  if (!session || !session.transport?.sendEvent) {
+    console.warn('[aspect-context] session transport unavailable; queueing update');
+    pendingAspectContext = stripped;
+    (window as any).__pendingAspectContext = stripped;
+    return false;
+  }
+
+  // REMOVE THIS ENTIRE DELETION BLOCK TO AVOID ERRORS
+  // if (lastAspectContextId) {
+  //   try {
+  //     session.transport.sendEvent({
+  //       type: 'conversation.item.delete',
+  //       item_id: lastAspectContextId,
+  //     });
+  //     console.log('[aspect-context] removed previous aspect context message', lastAspectContextId);
+  //   } catch (error) {
+  //     console.warn('[aspect-context] failed to remove previous aspect context message', {
+  //       error,
+  //       messageId: lastAspectContextId,
+  //     });
+  //   }
+  // }
+
+  const messageId =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? `aspect-${crypto.randomUUID()}`
+      : `aspect-${Date.now().toString(36)}`;
+
+  try {
+    session.transport.sendEvent({
+      type: 'conversation.item.create',
+      item: {
+        id: messageId,
+        type: 'message',
+        role: 'system',
+        content: [{ type: 'input_text', text: stripped }],
+      },
+    });
+
+    lastAspectContextId = messageId;
+    pendingAspectContext = null;
+    (window as any).__pendingAspectContext = null;
+
+    console.log('[aspect-context] applied to session', {
+      messageId,
+      preview: stripped.slice(0, 120),
+    });
+    return true;
+  } catch (error) {
+    console.error('[aspect-context] failed to apply aspect context; will retry when session is ready', error);
+    pendingAspectContext = stripped;
+    (window as any).__pendingAspectContext = stripped;
+    return false;
+  }
+}
+
+
 // Simple browser crypto hash
 async function cryptoDigest(s: string): Promise<string> {
   const enc = new TextEncoder().encode(s);
@@ -195,3 +282,4 @@ export function injectExternalDataFromStore() {
 (window as any).__setActiveSession = setActiveSession;
 (window as any).__injectFromStore = injectExternalDataFromStore;
 (window as any).__injectCurrentData = injectCurrentExternalData;
+(window as any).__updateAspectContext = updateAspectContext;

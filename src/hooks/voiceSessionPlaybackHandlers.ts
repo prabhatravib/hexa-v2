@@ -351,6 +351,7 @@ export const registerVoiceSessionPlaybackHandlers = (
       'response_cancel_not_active',  // Trying to cancel when there's no active response
       'response_cancel_failed',      // Similar cancellation issues
       'invalid_value',               // Invalid API command (e.g., response.cancel_all in newer SDK)
+      'string_above_max_length',     // Empty or invalid message sent to API - non-fatal
     ];
 
     // Check if this is a non-critical error

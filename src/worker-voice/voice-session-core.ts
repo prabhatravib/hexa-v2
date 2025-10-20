@@ -64,7 +64,7 @@ export class VoiceSessionCore {
     this.autoRestartInterval = setInterval(() => {
       console.log('🔄 Auto-restarting worker after 15 minutes to prevent session expiration...');
       this.performAutoRestart();
-    }, 15 * 60 * 1000) as unknown as number;
+    }, 30 * 60 * 1000) as unknown as number;
   }
 
   private startIdleDetection(): void {
@@ -79,7 +79,7 @@ export class VoiceSessionCore {
       const idleTime = now - this.lastActivity;
       
       // If idle for more than 5 minutes, reset the session
-      if (idleTime > 5 * 60 * 1000) {
+      if (idleTime > 10 * 60 * 1000) {
         console.log('🔄 Session idle for 5+ minutes, performing smart reset...');
         this.performSmartReset();
       }
