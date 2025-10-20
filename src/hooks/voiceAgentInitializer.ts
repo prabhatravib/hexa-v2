@@ -442,12 +442,26 @@ ${getLanguageInstructions()}`;
             
             try {
               const history = args?.context?.history || [];
-              const functionCallItem = history.find((item: any) => item.type === 'function_call');
+              console.log('🎯 Full history length:', history.length);
+              console.log('🎯 History items:', history.map((item: any, index: number) => ({ 
+                index, 
+                type: item.type, 
+                hasArguments: !!item.arguments,
+                arguments: item.arguments 
+              })));
+              
+              // Find the MOST RECENT function_call item (last one in the array)
+              const functionCallItems = history.filter((item: any) => item.type === 'function_call');
+              const functionCallItem = functionCallItems[functionCallItems.length - 1]; // Get the last one
+              
+              console.log('🎯 Found function call items:', functionCallItems.length);
+              console.log('🎯 Using function call item:', functionCallItem);
               
               if (functionCallItem && functionCallItem.arguments) {
                 const parsedArgs = JSON.parse(functionCallItem.arguments);
                 aspectNumber = parsedArgs.aspectNumber || 1;
                 userRequest = parsedArgs.userRequest || '';
+                console.log('🎯 Parsed arguments from most recent function call:', parsedArgs);
               }
             } catch (parseError) {
               console.error('🎯 Error parsing aspect arguments:', parseError);

@@ -169,6 +169,44 @@ function App() {
         } else {
           console.warn('⚠️ Invalid aspect count:', count, '- must be between 2-10');
         }
+      } else if (event.data.type === 'SET_EXTERNAL_CONTEXT') {
+        // NEW: Handle external context injection
+        const { context } = event.data;
+        console.log('📝 Setting external context:', context);
+        
+        if (context && context.text) {
+          // Use the existing external data store
+          useExternalDataStore.getState().setExternalData({
+            text: context.text,
+            type: context.type || 'external_context',
+            source: context.source || 'postmessage'
+          });
+          
+          // Inject into active session if available
+          injectExternalContext({ text: context.text });
+          console.log('✅ External context injected successfully');
+        } else {
+          console.warn('⚠️ Invalid external context - missing text property');
+        }
+      } else if (event.data.type === 'INJECT_EXTERNAL_DATA') {
+        // NEW: Handle direct external data injection
+        const { data } = event.data;
+        console.log('💉 Injecting external data:', data);
+        
+        if (data && data.text) {
+          // Use the existing external data store
+          useExternalDataStore.getState().setExternalData({
+            text: data.text,
+            type: data.type || 'injected_data',
+            source: data.source || 'postmessage'
+          });
+          
+          // Inject into active session if available
+          injectExternalContext({ text: data.text });
+          console.log('✅ External data injected successfully');
+        } else {
+          console.warn('⚠️ Invalid external data - missing text property');
+        }
       }
     };
 
