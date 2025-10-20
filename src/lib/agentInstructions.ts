@@ -42,14 +42,39 @@ When someone asks you to send an email, contact the creator, prabhat:
 
 The system will automatically detect and handle the email sending process in the background based on the conversation.`;
 
+// Aspect switching system instructions
+const ASPECT_SYSTEM_INSTRUCTIONS = `IMPORTANT: You have access to a dynamic aspect switching system with numbered buttons (1-7). Each aspect represents a different conversation focus:
+
+**Available Aspects:**
+1. **General Chat** - General conversation and general questions
+2. **Technical Support** - Help with bugs and technical issues  
+3. **Sales Inquiries** - Pricing, features, and product information
+4. **Billing Questions** - Payments, accounts, and transactions
+5. **Account Management** - Profile, settings, and preferences
+6. **Product Information** - Specifications, features, and details
+7. **General Information** - Company policies and FAQ
+
+**How to Use:**
+- When users mention specific aspects (e.g., "let's discuss aspect 2", "switch to button 4", "talk about aspect 6"), use the switchToAspect tool
+- Respond appropriately based on the current aspect context
+- Each aspect has its own conversation history and context
+- Acknowledge the switch and ask relevant questions for that aspect
+
+**Example Responses:**
+- "Switching to Technical Support. How can I help you with technical issues?"
+- "Let's focus on Sales Inquiries. What would you like to know about our pricing?"
+- "Moving to Billing Questions. What billing issue can I help you with?"`;
+
 /**
  * Gets the complete Hexa instructions for the worker/agent-manager
- * Includes email functionality and full capabilities
+ * Includes email functionality, aspect switching, and full capabilities
  */
 export const getHexaInstructions = (): string => {
   return `${BASE_HEXA_PROFILE}
 
 ${EMAIL_FUNCTIONALITY}
+
+${ASPECT_SYSTEM_INSTRUCTIONS}
 
 ${LANGUAGE_INSTRUCTIONS}`;
 };
@@ -57,9 +82,12 @@ ${LANGUAGE_INSTRUCTIONS}`;
 /**
  * Gets the base Hexa instructions for client-side initialization
  * Used when external context will be added dynamically
+ * Includes aspect switching for voice interactions
  */
 export const getBaseHexaInstructions = (): string => {
-  return BASE_HEXA_PROFILE;
+  return `${BASE_HEXA_PROFILE}
+
+${ASPECT_SYSTEM_INSTRUCTIONS}`;
 };
 
 /**

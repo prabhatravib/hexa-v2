@@ -410,12 +410,83 @@ ${getLanguageInstructions()}`;
           }
         };
         
-        // Add tool directly to agent's tools array
+        // Create aspect switching tool
+        const aspectTool = {
+          type: "function" as const,
+          name: "switchToAspect",
+          description: "Switch to a specific aspect/button when user requests it. Available aspects: 1-General Chat, 2-Technical Support, 3-Sales Inquiries, 4-Billing Questions, 5-Account Management, 6-Product Information, 7-General Information.",
+          parameters: {
+            type: "object" as const,
+            properties: {
+              aspectNumber: { 
+                type: "number" as const, 
+                description: "The aspect number to switch to (1-7)",
+                minimum: 1,
+                maximum: 7
+              },
+              userRequest: { 
+                type: "string" as const, 
+                description: "The user's original request that triggered the aspect switch" 
+              }
+            },
+            required: ["aspectNumber", "userRequest"] as const,
+            additionalProperties: false
+          },
+          strict: false,
+          needsApproval: async () => false,
+          invoke: async (args: any) => {
+            console.log('🎯 Aspect tool invoke called with args:', JSON.stringify(args, null, 2));
+            
+            let aspectNumber = 1;
+            let userRequest = '';
+            
+            try {
+              const history = args?.context?.history || [];
+              const functionCallItem = history.find((item: any) => item.type === 'function_call');
+              
+              if (functionCallItem && functionCallItem.arguments) {
+                const parsedArgs = JSON.parse(functionCallItem.arguments);
+                aspectNumber = parsedArgs.aspectNumber || 1;
+                userRequest = parsedArgs.userRequest || '';
+              }
+            } catch (parseError) {
+              console.error('🎯 Error parsing aspect arguments:', parseError);
+            }
+            
+            console.log('🎯 Extracted aspectNumber:', aspectNumber);
+            console.log('🎯 Extracted userRequest:', userRequest);
+            
+            // Get aspect information for better response
+            const aspectInfo = {
+              1: "General Chat - general conversation and questions",
+              2: "Technical Support - help with bugs and technical issues", 
+              3: "Sales Inquiries - pricing, features, and product information",
+              4: "Billing Questions - payments, accounts, and transactions",
+              5: "Account Management - profile, settings, and preferences",
+              6: "Product Information - specifications, features, and details",
+              7: "General Information - company policies and FAQ"
+            };
+            
+            const aspectDescription = aspectInfo[aspectNumber as keyof typeof aspectInfo] || `Aspect ${aspectNumber}`;
+            
+            // Trigger aspect switching
+            window.dispatchEvent(new CustomEvent('voice-aspect-focus', {
+              detail: { aspectId: aspectNumber, source: 'ai-tool', text: userRequest }
+            }));
+            
+            console.log(`🎯 Aspect switching triggered: ${aspectDescription}`);
+            
+            return `Switched to ${aspectDescription}. How can I help you with this topic?`;
+          }
+        };
+
+        // Add tools directly to agent's tools array
         if (!(agent as any).tools) {
           (agent as any).tools = [];
         }
         (agent as any).tools.push(emailTool);
-        console.log('✅ Email tool added to agent.tools array');
+        (agent as any).tools.push(aspectTool);
+        console.log('✅ Email and Aspect tools added to agent.tools array');
         
         // Also register with OpenAI API via session.update
         const send = getSessionSend(session as any);
@@ -423,32 +494,55 @@ ${getLanguageInstructions()}`;
           await send({
             type: 'session.update',
             session: {
-              tools: [{
-                type: "function",
-                name: "sendEmailToCreator",
-                description: "Send an email message to the creator/developer Prabhat. Use this when the user wants to contact, email, or send a message to the creator, developer, or Prabhat.",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    message: { 
-                      type: "string", 
-                      description: "The message content to send to the creator" 
+              tools: [
+                {
+                  type: "function",
+                  name: "sendEmailToCreator",
+                  description: "Send an email message to the creator/developer Prabhat. Use this when the user wants to contact, email, or send a message to the creator, developer, or Prabhat.",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      message: { 
+                        type: "string", 
+                        description: "The message content to send to the creator" 
+                      },
+                      contactInfo: { 
+                        type: "string", 
+                        description: "Optional email address or name of the sender for follow-up" 
+                      }
                     },
-                    contactInfo: { 
-                      type: "string", 
-                      description: "Optional email address or name of the sender for follow-up" 
-                    }
-                  },
-                  required: ["message"]
+                    required: ["message"]
+                  }
+                },
+                {
+                  type: "function",
+                  name: "switchToAspect",
+                  description: "Switch to a specific aspect/button when user requests it. Available aspects: 1-General Chat, 2-Technical Support, 3-Sales Inquiries, 4-Billing Questions, 5-Account Management, 6-Product Information, 7-General Information.",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      aspectNumber: { 
+                        type: "number", 
+                        description: "The aspect number to switch to (1-7)",
+                        minimum: 1,
+                        maximum: 7
+                      },
+                      userRequest: { 
+                        type: "string", 
+                        description: "The user's original request that triggered the aspect switch" 
+                      }
+                    },
+                    required: ["aspectNumber", "userRequest"]
+                  }
                 }
-              }]
+              ]
             }
           });
-          console.log('✅ Tool definition sent to OpenAI API via session.update');
+          console.log('✅ Email and Aspect tool definitions sent to OpenAI API via session.update');
         }
         
       } catch (error) {
-        console.error('❌ Failed to register email tool:', error);
+        console.error('❌ Failed to register email and aspect tools:', error);
       }
       
       // Flush any pending external context

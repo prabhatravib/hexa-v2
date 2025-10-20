@@ -200,7 +200,9 @@ export class VoiceSessionHandlers {
 
   handleOpenAIConnectionMessage(data: string): void {
     try {
+      console.log('🔍 VoiceSessionHandlers received OpenAI message:', data.substring(0, 100) + '...');
       const message = JSON.parse(data);
+      console.log('🔍 Parsed message type:', message.type);
       this.messageHandlers.handleOpenAIMessage(data);
     } catch (error) {
       console.error('Failed to handle OpenAI connection message:', error);

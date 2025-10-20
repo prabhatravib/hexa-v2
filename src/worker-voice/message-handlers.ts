@@ -329,6 +329,7 @@ export class MessageHandlers {
 
   handleOpenAIMessage(data: string): void {
     try {
+      console.log('🔍 MessageHandlers.handleOpenAIMessage called with data length:', data.length);
       const message = JSON.parse(data);
       
       // Debug: Log all message types to see what's happening
@@ -417,6 +418,21 @@ export class MessageHandlers {
             });
           } else {
             console.log('❌ No aspect pattern matched in voice input');
+            // Add simple fallback detection
+            const simpleMatch = message.transcript.match(/(?:aspect|button)\s*(\d{1,2})/i);
+            if (simpleMatch) {
+              const fallbackNumber = parseInt(simpleMatch[1], 10);
+              if (fallbackNumber >= 1 && fallbackNumber <= 10) {
+                console.log(`🎯 Fallback aspect detection: aspect ${fallbackNumber}`);
+                this.broadcastToClients({
+                  type: 'ASPECT_FOCUS_REQUEST',
+                  aspectId: fallbackNumber,
+                  source: 'voice',
+                  text: message.transcript,
+                  timestamp: Date.now()
+                });
+              }
+            }
           }
 
           this.broadcastToClients({
@@ -545,10 +561,10 @@ export class MessageHandlers {
     const hasAspectKeyword = /\b(aspect|button|topic|context)\b/i.test(lowerText);
 
     const explicitNumberPatterns = [
-      /(?:focus|switch|change|move|go|jump|shift)\s+(?:to\s+)?(?:aspect|button)\s*(\d{1,2})/i,
-      /(?:show|open|display)\s+(?:aspect|button)\s*(\d{1,2})/i,
-      /(?:select|choose|highlight|activate)\s+(?:aspect|button)\s*(\d{1,2})/i,
-      /(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:focus|switch|change|move|go|jump|shift|discuss)\s+(?:to\s+)?(?:about\s+)?(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:show|open|display)\s+(?:about\s+)?(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:select|choose|highlight|activate)\s+(?:about\s+)?(?:aspect|button)\s*(\d{1,2})/i,
+      /(?:aspect|button)\s+(?:about\s+)?(\d{1,2})/i,
       /(?:aspect|button)\s+number\s*(\d{1,2})/i,
       /number\s*(\d{1,2})\s+(?:aspect|button)/i,
     ];
@@ -572,6 +588,7 @@ export class MessageHandlers {
       new RegExp(`(?:the\\s+)?${ordinalCapture}\\s+(?:aspect|button|topic|one|thing|item)`, 'i'),
       new RegExp(`(?:let's|can we|shall we|i want to)\\s+(?:discuss|talk about|focus on|move to|switch to)\\s+(?:the\\s+)?${ordinalCapture}(?:\\s+(?:aspect|button|topic|thing|item|one))?`, 'i'),
       new RegExp(`aspect\\s+${ordinalCapture}`, 'i'),
+      new RegExp(`(?:said|meant)\\s+(?:the\\s+)?${ordinalCapture}(?:\\s+(?:aspect|button|one))?`, 'i'),
     ];
 
     for (const pattern of ordinalPatterns) {
