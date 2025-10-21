@@ -428,7 +428,7 @@ Previous contexts are cleared when switching aspects.
               <>
                 {currentVoiceMessages.length === 0 && (
                   <div className="text-center text-gray-400 text-sm mt-8">
-                    Start talking to the hexagon
+                    Talk to the hexagon!
                   </div>
                 )}
 
@@ -440,7 +440,7 @@ Previous contexts are cleared when switching aspects.
               <>
                 {currentTextMessages.length === 0 && (
                   <div className="text-center text-gray-400 text-sm mt-8">
-                    Start typing to begin text conversation
+                    Text with the hexagon!
                   </div>
                 )}
 

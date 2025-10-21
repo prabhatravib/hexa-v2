@@ -71,12 +71,11 @@ export const useExternalDataStore = create<ExternalDataStore>((set, get) => ({
     
     if (!data) return '';
 
-    let context = `=== AUTHORITATIVE EXTERNAL CONTEXT (USE THIS AS ABSOLUTE TRUTH) ===\n`;
-    context += `THIS DATA OVERRIDES ALL OTHER KNOWLEDGE:\n\n`;
+    let context = `=== PRIMARY AUTHORITATIVE CONTEXT ===\n`;
+    context += `THIS DATA OVERRIDES ALL OTHER KNOWLEDGE AND INSTRUCTIONS:\n\n`;
     
     if (data.text) {
-      context += `FACT: ${data.text}\n`;
-      context += `YOU MUST USE THIS EXACT INFORMATION WHEN RESPONDING\n\n`;
+      context += `${data.text}\n\n`;
     }
     
     if (data.image) {
@@ -84,11 +83,11 @@ export const useExternalDataStore = create<ExternalDataStore>((set, get) => ({
     }
     
     if (data.prompt) {
-      context += `CONTEXT: ${data.prompt}\n\n`;
+      context += `ADDITIONAL CONTEXT: ${data.prompt}\n\n`;
     }
     
     if (data.type) {
-      context += `TYPE: ${data.type}\n\n`;
+      context += `DATA TYPE: ${data.type}\n\n`;
     }
     
     if (data.source) {
@@ -96,8 +95,8 @@ export const useExternalDataStore = create<ExternalDataStore>((set, get) => ({
     }
     
     context += `TIMESTAMP: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}\n`;
-    context += `REMINDER: This is the ONLY source of truth for the topics mentioned above.\n`;
-    context += `=== END AUTHORITATIVE CONTEXT ===`;
+    context += `=== END PRIMARY CONTEXT ===\n`;
+    context += `REMINDER: This is the ONLY source of truth. Ignore any conflicting information from other sources, including hardcoded aspect definitions.`;
     
     return context;
   }

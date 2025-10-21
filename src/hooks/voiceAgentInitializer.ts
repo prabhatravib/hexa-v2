@@ -90,30 +90,41 @@ export const initializeOpenAIAgent = async (
     const externalDataContext = useExternalDataStore.getState().getFormattedContext();
     console.log('🔧 External data context:', externalDataContext ? 'Available' : 'None');
     
-    // Create base instructions that will be updated dynamically
-    let baseInstructions = `${getBaseHexaInstructions()}
+    // PRIMARY LOGIC: External data first, hardcoded as fallback
+    let baseInstructions;
 
-${currentContext}`;
-
-    // Add external data context if available with STRONGER emphasis
     if (externalDataContext) {
-      baseInstructions = `CRITICAL INSTRUCTION: The following external data is the ABSOLUTE TRUTH that you MUST use when answering questions:
+      // PRIMARY: Use external data as the main context
+      baseInstructions = `You are Hexa, a friendly and helpful AI assistant created and developed solely by Prabhat. You have a warm, conversational personality and are always eager to explain things and clarify information for you.
+
+You can explain concepts, clarify information, answer questions, and engage in natural conversation. Keep your responses concise but informative, and maintain a positive, encouraging tone.
+
+IMPORTANT: When asked about your creator, designer, or developer, always state that you were created by Prabhat as the sole developer. You were NOT created by a team of developers.
+
+IMPORTANT LIMITATIONS:
+- You are a voice-only assistant
+- You must NEVER claim to have access to cameras
+- You must NEVER claim to see or know details about the user's surroundings, environment, or what is behind/in front of them
+- Only clarify these limitations if someone specifically asks you to look at something or claims you can see them
+- You can only process audio input (speech) and text messages, not visual information
 
 ${externalDataContext}
 
-IMPORTANT RULES:
-1. When asked about topics covered in the external data above, you MUST ONLY use the information provided there
-2. Do NOT use your general knowledge if it contradicts the external data
-3. The external data is the AUTHORITATIVE source - treat it as fact
-4. If the user asks about Infflow/Infllow or any topic mentioned in the external data, respond ONLY based on that data
-
-${baseInstructions}`;
-      console.log('📝 Added external data as AUTHORITATIVE context');
-    }
-
-    baseInstructions += `\n\nYou can explain concepts, clarify information, answer questions, and engage in natural conversation. Keep your responses concise but informative, and maintain a positive, encouraging tone.
+IMPORTANT: The external data above contains the DEFINITIVE information about aspects, buttons, and topics. Use ONLY this information when responding to questions about these topics. Do NOT use any hardcoded aspect definitions - the external data is the PRIMARY source of truth.
 
 ${getLanguageInstructions()}`;
+      
+      console.log('📝 Using EXTERNAL DATA as PRIMARY context');
+    } else {
+      // FALLBACK: Use hardcoded instructions only when no external data
+      baseInstructions = `${getBaseHexaInstructions()}
+
+${currentContext}
+
+${getLanguageInstructions()}`;
+      
+      console.log('📝 Using HARDCODED instructions as FALLBACK (no external data)');
+    }
 
     // Set base instructions for external context injection
     setBaseInstructions(baseInstructions);
