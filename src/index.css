@@ -141,3 +141,25 @@ body {
     padding: 0;
   }
 }
+
+/* Pulsing animation for hexagon text - same as text chart icon */
+@keyframes hexagonTextPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+    filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.4)); /* Green glow */
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 24px rgba(34, 197, 94, 0.8)); /* Brighter green glow */
+  }
+}
+
+.hexagon-text-pulse {
+  animation: hexagonTextPulse 2s ease-in-out infinite;
+  will-change: transform, opacity;
+  font-size: 20px;
+  display: inline-block;
+  color: #10b981; /* emerald-500 to match your theme */
+}

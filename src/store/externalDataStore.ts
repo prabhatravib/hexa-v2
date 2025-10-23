@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { sessionIsolation } from '../lib/sessionIsolation';
 
 export interface ExternalData {
   text?: string;
@@ -6,7 +7,8 @@ export interface ExternalData {
   prompt?: string;
   type?: string;
   timestamp?: number;
-  source?: 'mermaid' | 'user_input' | 'api';
+  source?: 'mermaid' | 'user_input' | 'api' | 'iframe_session';
+  sessionId?: string; // Add session tracking
 }
 
 interface ExternalDataStore {
@@ -29,25 +31,34 @@ export const useExternalDataStore = create<ExternalDataStore>((set, get) => ({
   history: [],
 
   setExternalData: (data: ExternalData) => {
+    const sessionId = sessionIsolation.getCurrentSessionId();
     const timestampedData = {
       ...data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      sessionId
     };
+    
+    // Store in session isolation as well
+    sessionIsolation.setExternalData(timestampedData);
     
     set((state) => ({
       currentData: timestampedData,
-      history: [timestampedData, ...state.history.slice(0, 9)] // Keep last 10 items
+      history: [timestampedData, ...state.history.slice(0, 9)]
     }));
   },
 
   clearExternalData: () => {
+    const sessionId = sessionIsolation.getCurrentSessionId();
+    sessionIsolation.setExternalData(null);
     set({ currentData: null });
   },
 
   addToHistory: (data: ExternalData) => {
+    const sessionId = sessionIsolation.getCurrentSessionId();
     const timestampedData = {
       ...data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      sessionId
     };
     
     set((state) => ({
@@ -57,19 +68,25 @@ export const useExternalDataStore = create<ExternalDataStore>((set, get) => ({
 
   getLatestByType: (type: string) => {
     const state = get();
-    return state.history.find(item => item.type === type) || null;
+    const sessionId = sessionIsolation.getCurrentSessionId();
+    return state.history.find(item => item.type === type && item.sessionId === sessionId) || null;
   },
 
   hasData: () => {
     const state = get();
-    return state.currentData !== null;
+    const sessionId = sessionIsolation.getCurrentSessionId();
+    return state.currentData !== null && state.currentData.sessionId === sessionId;
   },
 
   getFormattedContext: () => {
     const state = get();
+    const sessionId = sessionIsolation.getCurrentSessionId();
     const data = state.currentData;
     
-    if (!data) return '';
+    // Only return context for current session
+    if (!data || data.sessionId !== sessionId) {
+      return '';
+    }
 
     let context = `=== PRIMARY AUTHORITATIVE CONTEXT ===\n`;
     context += `THIS DATA OVERRIDES ALL OTHER KNOWLEDGE AND INSTRUCTIONS:\n\n`;
@@ -95,6 +112,7 @@ export const useExternalDataStore = create<ExternalDataStore>((set, get) => ({
     }
     
     context += `TIMESTAMP: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Unknown'}\n`;
+    context += `SESSION ID: ${sessionId}\n`;
     context += `=== END PRIMARY CONTEXT ===\n`;
     context += `REMINDER: This is the ONLY source of truth. Ignore any conflicting information from other sources, including hardcoded aspect definitions.`;
     

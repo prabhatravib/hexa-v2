@@ -1,9 +1,11 @@
 /**
  * External Context Utilities
  * Handles injection of external context into active Realtime sessions using Zustand store
+ * Now with session isolation to prevent state bleeding between different contexts
  */
 
 import { useExternalDataStore } from '../store/externalDataStore';
+import { sessionIsolation } from './sessionIsolation';
 
 export function stripCodeFences(raw: string): string {
   // Remove ```xxx fences and trim
@@ -22,14 +24,21 @@ export function stripCodeFences(raw: string): string {
   return raw.trim();
 }
 
-// Global reference to the active session
+// Global reference to the active session (maintained for backward compatibility)
 let activeSession: any = null;
 let baseInstructions = '';
 let lastInjectedHash = '';
 let lastAspectContextId: string | null = null;
 let pendingAspectContext: string | null = null;
 
+// Store global external data that persists across sessions (maintained for backward compatibility)
+let globalExternalData: string | null = null;
+
 export function setActiveSession(session: any) {
+  // Update session isolation manager
+  sessionIsolation.setActiveSession(session);
+  
+  // Maintain backward compatibility with global variables
   activeSession = session;
   (window as any).activeSession = session; // important
   lastInjectedHash = '';
@@ -56,6 +65,7 @@ function isRealtimeReady() {
   const s = (window as any).activeSession || activeSession;
   const ready = !!s && s.state === 'open' && s.transport?.sendEvent;
   console.log('🔍 Realtime ready check:', {
+    sessionId: sessionIsolation.getCurrentSessionId(),
     hasSession: !!s,
     state: s?.state,
     hasTransport: !!s?.transport?.sendEvent,
@@ -65,17 +75,25 @@ function isRealtimeReady() {
 }
 
 export function setBaseInstructions(instr: string) {
+  // Update session isolation manager
+  sessionIsolation.setBaseInstructions(instr);
+  
+  // Maintain backward compatibility
   baseInstructions = instr || '';
 }
 
 export function getBaseInstructions(): string {
-  return baseInstructions;
+  // Try session-specific instructions first, fallback to global
+  const sessionInstructions = sessionIsolation.getBaseInstructions();
+  return sessionInstructions || baseInstructions;
 }
 
-// Store global external data that persists across sessions
-let globalExternalData: string | null = null;
 
 export function setGlobalExternalData(data: string) {
+  // Update session isolation manager
+  sessionIsolation.setExternalData({ text: data });
+  
+  // Maintain backward compatibility
   globalExternalData = data;
   console.log('🌍 Global external data set:', data);
 
@@ -89,23 +107,39 @@ export function setGlobalExternalData(data: string) {
 }
 
 export function getGlobalExternalData(): string | null {
-  return globalExternalData;
+  // Try session-specific data first, fallback to global
+  const sessionData = sessionIsolation.getExternalData();
+  return sessionData?.text || globalExternalData;
 }
 
 // Automatically inject global external data when session becomes active
 export async function injectGlobalExternalData() {
-  if (globalExternalData && activeSession) {
-    console.log('🔄 Injecting global external data into new session:', globalExternalData);
-    await injectExternalContext({ text: globalExternalData });
+  const sessionData = sessionIsolation.getExternalData();
+  const sessionActiveSession = sessionIsolation.getSessionContext().activeSession;
+  
+  // Try session-specific data first, fallback to global
+  const dataToInject = sessionData?.text || globalExternalData;
+  const activeSessionToUse = sessionActiveSession || activeSession;
+  
+  if (dataToInject && activeSessionToUse) {
+    console.log('🔄 Injecting global external data into new session:', dataToInject);
+    await injectExternalContext({ text: dataToInject });
   } else {
     console.log('ℹ️ No global external data or no active session:', {
-      hasGlobalData: !!globalExternalData,
-      hasActiveSession: !!activeSession,
+      hasGlobalData: !!dataToInject,
+      hasActiveSession: !!activeSessionToUse,
     });
   }
 }
 
 export function clearActiveSession() {
+  // Clear session-specific data
+  const sessionId = sessionIsolation.getCurrentSessionId();
+  const context = sessionIsolation.getSessionContext(sessionId);
+  context.activeSession = null;
+  context.lastAspectContextId = null;
+  
+  // Maintain backward compatibility
   activeSession = null;
   lastAspectContextId = null;
 }
@@ -149,12 +183,18 @@ export async function injectExternalContext(data: { text: string } | string): Pr
     return false;
   }
 
-  // de-dupe (optional)
+  // Check for duplicates using session-specific hash
+  const sessionId = sessionIsolation.getCurrentSessionId();
+  const context = sessionIsolation.getSessionContext(sessionId);
   const hash = await cryptoDigest(stripped);
-  if (hash === lastInjectedHash) {
+  
+  if (hash === context.lastInjectedHash) {
     console.log('⏭️ Skipping duplicate injection (same content already injected)');
     return true;
   }
+  
+  // Update both session-specific and global hash for backward compatibility
+  context.lastInjectedHash = hash;
   lastInjectedHash = hash;
 
   // Silent system context. No response.create here.
@@ -188,6 +228,9 @@ export async function updateAspectContext(raw: string): Promise<boolean> {
 
   if (!isRealtimeReady()) {
     console.log('[aspect-context] session not ready, queueing update');
+    const sessionId = sessionIsolation.getCurrentSessionId();
+    const context = sessionIsolation.getSessionContext(sessionId);
+    context.pendingAspectContext = stripped;
     pendingAspectContext = stripped;
     (window as any).__pendingAspectContext = stripped;
     return false;
@@ -196,26 +239,13 @@ export async function updateAspectContext(raw: string): Promise<boolean> {
   const session = (window as any).activeSession || activeSession;
   if (!session || !session.transport?.sendEvent) {
     console.warn('[aspect-context] session transport unavailable; queueing update');
+    const sessionId = sessionIsolation.getCurrentSessionId();
+    const context = sessionIsolation.getSessionContext(sessionId);
+    context.pendingAspectContext = stripped;
     pendingAspectContext = stripped;
     (window as any).__pendingAspectContext = stripped;
     return false;
   }
-
-  // REMOVE THIS ENTIRE DELETION BLOCK TO AVOID ERRORS
-  // if (lastAspectContextId) {
-  //   try {
-  //     session.transport.sendEvent({
-  //       type: 'conversation.item.delete',
-  //       item_id: lastAspectContextId,
-  //     });
-  //     console.log('[aspect-context] removed previous aspect context message', lastAspectContextId);
-  //   } catch (error) {
-  //     console.warn('[aspect-context] failed to remove previous aspect context message', {
-  //       error,
-  //       messageId: lastAspectContextId,
-  //     });
-  //   }
-  // }
 
   const messageId =
     typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -233,17 +263,26 @@ export async function updateAspectContext(raw: string): Promise<boolean> {
       },
     });
 
+    // Update both session-specific and global state for backward compatibility
+    const sessionId = sessionIsolation.getCurrentSessionId();
+    const context = sessionIsolation.getSessionContext(sessionId);
+    context.lastAspectContextId = messageId;
+    context.pendingAspectContext = null;
     lastAspectContextId = messageId;
     pendingAspectContext = null;
     (window as any).__pendingAspectContext = null;
 
     console.log('[aspect-context] applied to session', {
+      sessionId,
       messageId,
       preview: stripped.slice(0, 120),
     });
     return true;
   } catch (error) {
     console.error('[aspect-context] failed to apply aspect context; will retry when session is ready', error);
+    const sessionId = sessionIsolation.getCurrentSessionId();
+    const context = sessionIsolation.getSessionContext(sessionId);
+    context.pendingAspectContext = stripped;
     pendingAspectContext = stripped;
     (window as any).__pendingAspectContext = stripped;
     return false;
@@ -269,7 +308,12 @@ export function injectExternalDataFromStore() {
     return;
   }
 
-  if (!activeSession) {
+  // Check both session-specific and global active session
+  const sessionId = sessionIsolation.getCurrentSessionId();
+  const context = sessionIsolation.getSessionContext(sessionId);
+  const activeSessionToUse = context.activeSession || activeSession;
+
+  if (!activeSessionToUse) {
     return;
   }
 
