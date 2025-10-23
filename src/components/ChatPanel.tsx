@@ -427,9 +427,33 @@ Previous contexts are cleared when switching aspects.
             {activeTab === 'voice' ? (
               <>
                 {currentVoiceMessages.length === 0 && (
-                  <div className="text-center text-gray-400 text-sm mt-8">
+                  <motion.div 
+                    className="text-center text-lg font-semibold mt-8"
+                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                    animate={{ 
+                      opacity: 1, 
+                      scale: 1, 
+                      y: 0,
+                      color: [
+                        "#6b7280", // gray-500
+                        "#10b981", // emerald-500
+                        "#6b7280"  // back to gray-500
+                      ]
+                    }}
+                    transition={{ 
+                      duration: 2.5,
+                      ease: "easeInOut",
+                      repeat: Infinity,
+                      repeatDelay: 3
+                    }}
+                    whileHover={{
+                      scale: 1.05,
+                      color: "#10b981",
+                      transition: { duration: 0.3 }
+                    }}
+                  >
                     Talk to the hexagon!
-                  </div>
+                  </motion.div>
                 )}
 
                 {currentVoiceMessages.map((message) => (
@@ -439,9 +463,33 @@ Previous contexts are cleared when switching aspects.
             ) : (
               <>
                 {currentTextMessages.length === 0 && (
-                  <div className="text-center text-gray-400 text-sm mt-8">
+                  <motion.div 
+                    className="text-center text-lg font-semibold mt-8"
+                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                    animate={{ 
+                      opacity: 1, 
+                      scale: 1, 
+                      y: 0,
+                      color: [
+                        "#6b7280", // gray-500
+                        "#10b981", // emerald-500
+                        "#6b7280"  // back to gray-500
+                      ]
+                    }}
+                    transition={{ 
+                      duration: 2.5,
+                      ease: "easeInOut",
+                      repeat: Infinity,
+                      repeatDelay: 3
+                    }}
+                    whileHover={{
+                      scale: 1.05,
+                      color: "#10b981",
+                      transition: { duration: 0.3 }
+                    }}
+                  >
                     Text with the hexagon!
-                  </div>
+                  </motion.div>
                 )}
 
                 {currentTextMessages.map((message) => (
