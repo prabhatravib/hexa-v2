@@ -1,11 +1,11 @@
 {
-  "name": "hexa-worker",
+  "name": "hexa-worker-v2",
   "compatibility_date": "2025-08-16",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist"
   },
-  "main": "src/worker-voice/index.ts",
+  "main": "dist/worker-voice/index.js",
   "durable_objects": {
     "bindings": [
       {
@@ -31,10 +31,6 @@
     }
   ],
 
-  "build": {
-    "command": "yarn build:worker",
-    "watch_dir": "src"
-  },
 
   "observability": {
     "logs": {

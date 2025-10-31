@@ -1,0 +1,84 @@
+%%{init: {"theme":"default", "themeVariables": {}, "themeCSS": ".nw{position:relative;padding:4px 6px;padding-right:18px;text-align:center;white-space:nowrap}.nw::after{content:attr(data-n);position:absolute;top:0;right:0;background:#fff;border:1px solid #888;border-radius:3px;padding:0 4px;font:700 10px/1 sans-serif;pointer-events:none}"}}%%
+
+flowchart TD
+    Start([User Opens Application]) --> Init("<div class='nw' data-n='1'>Frontend Initializes<br/>Voice Control Service</div>")
+    Init --> CheckVoice{Voice Disabled?}
+    CheckVoice -->|Yes| Block("<div class='nw' data-n='2'>Block Voice Interaction</div>")
+    CheckVoice -->|No| SSEConnect("<div class='nw' data-n='2'>Establish SSE Connection<br/>to /voice/sse Endpoint</div>")
+    
+    SSEConnect --> Worker("<div class='nw' data-n='3'>Cloudflare Worker Receives<br/>Request Routes to Durable Object</div>")
+    Worker --> DO("<div class='nw' data-n='4'>Route to Durable Object<br/>VoiceSession Instance</div>")
+    DO --> CreateSession("<div class='nw' data-n='5'>Create OpenAI Realtime Session<br/>Configure Audio Format and VAD</div>")
+    CreateSession --> SessionConfig("<div class='nw' data-n='6'>Configure Session Parameters<br/>Model PCM16 Format VAD Settings</div>")
+    
+    SessionConfig --> SessionResp("<div class='nw' data-n='7'>OpenAI Returns Session Data<br/>sessionId and clientSecret Values</div>")
+    SessionResp --> BroadcastSession("<div class='nw' data-n='8'>Broadcast session_info Event<br/>via SSE to Frontend Client</div>")
+    
+    BroadcastSession --> FrontendInit("<div class='nw' data-n='9'>Frontend Receives Session Info<br/>Initializes WebRTC Transport Layer</div>")
+    FrontendInit --> WebRTCSetup("<div class='nw' data-n='10'>Initialize WebRTC Transport<br/>OpenAIRealtimeWebRTC Component</div>")
+    WebRTCSetup --> WebRTCConnect("<div class='nw' data-n='11'>Establish Direct WebRTC Connection<br/>Between Frontend and OpenAI</div>")
+    
+    WebRTCConnect --> Ready[System Ready]
+    Ready --> UserSpeaks([User Speaks<br/>into Microphone])
+    
+    UserSpeaks --> Capture("<div class='nw' data-n='12'>Frontend Captures Audio Input<br/>Real-time PCM16 Format Processing</div>")
+    Capture --> AudioAnalysis("<div class='nw' data-n='13'>Real-time Audio Analysis<br/>Speech Intensity Detection System</div>")
+    AudioAnalysis --> WebRTCSend("<div class='nw' data-n='14'>Send Audio via WebRTC<br/>to OpenAI Realtime API</div>")
+    
+    WebRTCSend --> VAD("<div class='nw' data-n='15'>OpenAI Server-Side VAD Detects<br/>Voice Activity and Speech Turns</div>")
+    VAD --> Silence{Silence<br/>Detected?}
+    Silence -->|No| ContinueCapture[Continue Capturing Audio]
+    ContinueCapture --> WebRTCSend
+    Silence -->|Yes| TurnDetection("<div class='nw' data-n='16'>Turn Detection Complete<br/>Threshold Silence Duration Met</div>")
+    
+    TurnDetection --> Transcribe("<div class='nw' data-n='17'>Transcribe Input Audio Stream<br/>Using gpt-4o-mini-transcribe Model</div>")
+    Transcribe --> Process("<div class='nw' data-n='18'>OpenAI GPT Processes Request<br/>Generates Response with Instructions</div>")
+    
+    Process --> ExternalData{External Data<br/>Available?}
+    ExternalData -->|Yes| InjectContext("<div class='nw' data-n='19'>Inject External Context Data<br/>via session.update Event</div>")
+    ExternalData -->|No| ContinueProcess[Continue Processing]
+    InjectContext --> ContinueProcess
+    
+    ContinueProcess --> GenerateResponse("<div class='nw' data-n='20'>Generate Audio Response Stream<br/>Text-to-Speech Conversion Complete</div>")
+    GenerateResponse --> StreamStart("<div class='nw' data-n='21'>Stream Audio Start Event<br/>response.audio.start Triggered</div>")
+    StreamStart --> BroadcastStart("<div class='nw' data-n='22'>Worker Broadcasts agent_start<br/>via SSE to Frontend</div>")
+    BroadcastStart --> UIStart("<div class='nw' data-n='23'>Frontend Updates UI State<br/>Changes to Speaking Mode</div>")
+    
+    UIStart --> AudioStream("<div class='nw' data-n='24'>Audio Streams via WebRTC<br/>PCM16 Audio Deltas Received</div>")
+    AudioStream --> PlayAudio("<div class='nw' data-n='25'>Frontend Plays Audio Stream<br/>via HTMLAudioElement</div>")
+    PlayAudio --> IntensityAnalysis("<div class='nw' data-n='26'>Real-time Intensity Analysis<br/>for Mouth Animation System</div>")
+    
+    IntensityAnalysis --> AudioDone{Audio<br/>Complete?}
+    AudioDone -->|No| AudioStream
+    AudioDone -->|Yes| StreamDone("<div class='nw' data-n='27'>Stream Complete Event<br/>response.audio.done Received</div>")
+    
+    StreamDone --> BroadcastDone("<div class='nw' data-n='28'>Worker Broadcasts agent_end<br/>via SSE to Frontend</div>")
+    BroadcastDone --> UIIdle("<div class='nw' data-n='29'>Frontend Updates UI State<br/>Changes to Idle Mode</div>")
+    UIIdle --> Ready
+    
+    %% Error Handling
+    WebRTCConnect -->|Connection Failed| Retry[Retry Connection<br/>or Show Error]
+    Process -->|Error| ErrorHandler[Handle Error<br/>Broadcast via SSE]
+    ErrorHandler --> UIIdle
+    
+    %% Additional Features
+    Ready --> TextInput([Optional: Send Text Message])
+    TextInput --> TextSend[Send Text via SSE<br/>/voice/message]
+    TextSend --> Process
+    
+    Ready --> Interrupt([User Interrupts])
+    Interrupt --> CancelResponse[Send response.cancel<br/>via WebRTC]
+    CancelResponse --> UIIdle
+    
+    %% Styling
+    classDef frontend fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef worker fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef openai fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef decision fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    classDef user fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px
+    
+    class Start,UserSpeaks,TextInput,Interrupt user
+    class Init,FrontendInit,WebRTCSetup,WebRTCConnect,Capture,AudioAnalysis,WebRTCSend,PlayAudio,IntensityAnalysis,UIStart,UIIdle,TextSend,CancelResponse frontend
+    class Worker,DO,CreateSession,SessionConfig,SessionResp,BroadcastSession,BroadcastStart,BroadcastDone,TextSend,ErrorHandler worker
+    class VAD,Transcribe,Process,GenerateResponse,StreamStart,AudioStream,StreamDone,ExternalData,InjectContext openai
+    class CheckVoice,Silence,AudioDone,ExternalData decision

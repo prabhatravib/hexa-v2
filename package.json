@@ -6,8 +6,8 @@
   "packageManager": "yarn@1.22.22",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:worker": "vite build && node scripts/inject-assets.js && tsc -p tsconfig.worker.json",
+    "build": "node scripts/ensure-build.js || (vite build && node scripts/ensure-build.js)",
+    "build:worker": "node scripts/ensure-build.js && node scripts/inject-assets.js",
     "deploy": "yarn build:worker && wrangler deploy",
     "lint": "eslint .",
     "preview": "vite preview",
