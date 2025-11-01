@@ -5,7 +5,7 @@
   "assets": {
     "directory": "./dist"
   },
-  "main": "dist/worker-voice/index.js",
+  "main": "src/worker-voice/index.ts",
   "durable_objects": {
     "bindings": [
       {
@@ -31,6 +31,10 @@
     }
   ],
 
+  "build": {
+    "command": "yarn build:worker",
+    "watch_dir": "src"
+  },
 
   "observability": {
     "logs": {

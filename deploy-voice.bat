@@ -2,14 +2,14 @@
 setlocal
 echo 🚀 Deploying Hexa Voice Worker to Cloudflare...
 
-REM Build the application (skip if dist/index.html already exists)
+REM Build the application
 echo 📦 Building application...
-call yarn build
+call npm run build
 if errorlevel 1 goto :error
 
 REM Build the worker
 echo 🔧 Building worker...
-call yarn build:worker
+call npm run build:worker
 if errorlevel 1 goto :error
 
 REM Deploy to Cloudflare Workers
