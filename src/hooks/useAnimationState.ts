@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 
 interface UseAnimationStateOptions {
   enableBlink?: boolean;
@@ -25,7 +25,7 @@ export const useAnimationState = (options: UseAnimationStateOptions = {}) => {
     triggerBlink,
     setAnimationState,
     setExpressionState,
-  } = useAnimationStore();
+  } = useHexaStore();
 
   const blinkTimerRef = useRef<NodeJS.Timeout | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -125,7 +125,7 @@ export const useAnimationState = (options: UseAnimationStateOptions = {}) => {
 
 // Hook for specific animation sequences
 export const useAnimationSequence = () => {
-  const { setAnimationState, setExpressionState, triggerBlink } = useAnimationStore();
+  const { setAnimationState, setExpressionState, triggerBlink } = useHexaStore();
   const sequenceRef = useRef<NodeJS.Timeout[]>([]);
 
   const clearSequence = useCallback(() => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { TIMING, OPACITY, COLORS, SCALE } from '@/animations/constants';
 
 interface AnimatedGlowProps {
@@ -18,7 +18,7 @@ export const AnimatedGlow: React.FC<AnimatedGlowProps> = ({
   ringsEnabled = true,
   className = '',
 }) => {
-  const { animationState, expressionState, isPulsing } = useAnimationStore();
+  const { animationState, expressionState, isPulsing } = useHexaStore();
   
   // Dynamic color based on state
   const getGlowColor = () => {

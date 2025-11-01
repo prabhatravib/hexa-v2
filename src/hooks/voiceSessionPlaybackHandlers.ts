@@ -1,4 +1,4 @@
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { stopAudioAnalysis } from './voiceAudioAnalysis';
 import { isVoiceDisabledNow } from '@/lib/voiceDisableGuard';
 import type {
@@ -70,7 +70,7 @@ export const registerVoiceSessionPlaybackHandlers = (
 
   const forceStopSpeaking = (reason: string) => {
     try {
-      const disabled = useAnimationStore.getState().isVoiceDisabled;
+      const disabled = useHexaStore.getState().isVoiceDisabled;
       if (disabled) {
         console.log(`dY"ÃƒÂ¯Ã‚Â¿Ã‚Â½ Voice disabled: ignoring ${reason} - not stopping speaking state`);
         return;
@@ -105,14 +105,14 @@ export const registerVoiceSessionPlaybackHandlers = (
 
     // Reset mouth animation target to prevent stuck-open mouth
     try {
-      useAnimationStore.getState().setMouthTarget(0);
+      useHexaStore.getState().setMouthTarget(0);
     } catch (error) {
       console.error('Failed to reset mouth target:', error);
     }
 
     // Set isAudioPlaying = false to indicate audio has stopped
     try {
-      useAnimationStore.getState().setAudioPlaying(false);
+      useHexaStore.getState().setAudioPlaying(false);
       console.log('✅ Set isAudioPlaying = false on transport stop');
     } catch (error) {
       console.error('Failed to set isAudioPlaying:', error);
@@ -131,7 +131,7 @@ export const registerVoiceSessionPlaybackHandlers = (
 
   const delayedStopSpeaking = (reason: string) => {
     try {
-      const disabled = useAnimationStore.getState().isVoiceDisabled;
+      const disabled = useHexaStore.getState().isVoiceDisabled;
       if (disabled) {
         console.log(`dY"ÃƒÂ¯Ã‚Â¿Ã‚Â½ Voice disabled: ignoring ${reason} - not processing audio end event`);
         return;
@@ -215,7 +215,7 @@ export const registerVoiceSessionPlaybackHandlers = (
     // But 'play'/'playing' events don't fire again when audio data starts flowing
     // This ensures watchdog knows audio is active even without new play events
     try {
-      useAnimationStore.getState().setAudioPlaying(true);
+      useHexaStore.getState().setAudioPlaying(true);
       console.log('✅ Set isAudioPlaying = true on agent_start (optimistic)');
     } catch (error) {
       console.error('Failed to set isAudioPlaying:', error);

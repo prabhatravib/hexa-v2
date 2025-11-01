@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { AnimatedMouth } from './AnimatedMouth';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { OPACITY } from '@/animations/constants';
 
 interface HexagonSVGProps {

@@ -6,7 +6,7 @@ export type ExpressionState = 'happy' | 'neutral' | 'curious' | 'excited';
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error' | 'retrying' | 'disabled';
 export type InitializationState = 'initializing' | 'connecting' | 'ready' | 'error';
 
-interface AnimationStore {
+interface HexaStore {
   // Current states
   animationState: AnimationState;
   expressionState: ExpressionState;
@@ -39,9 +39,9 @@ interface AnimationStore {
    * Used by the watchdog to detect stale analyzer data.
    */
   mouthTargetUpdatedAt: number;
-  
 
   
+
   // State setters
   setAnimationState: (state: AnimationState) => void;
   setExpressionState: (expression: ExpressionState) => void;
@@ -93,7 +93,7 @@ interface AnimationStore {
   handleClick: () => void;
 }
 
-export const useAnimationStore = create<AnimationStore>((set, get) => ({
+export const useHexaStore = create<HexaStore>((set, get) => ({
   // Initial states
   animationState: 'idle',
   expressionState: 'happy',
@@ -274,3 +274,4 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
     }, TIMING.CLICK_BOUNCE_DURATION);
   },
 }));
+

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
-import { useAnimationStore, VoiceState } from '@/store/animationStore';
+import { useHexaStore, VoiceState } from '@/store/hexaStore';
 import { MOUTH_PATHS, TIMING, EASING } from '@/animations/constants';
 
 interface AnimatedMouthProps {
@@ -18,7 +18,7 @@ export const AnimatedMouth: React.FC<AnimatedMouthProps> = ({
   color = '#064e3b',
   className = '',
 }) => {
-  const { expressionState, animationState, mouthOpennessTarget, voiceState } = useAnimationStore();
+  const { expressionState, animationState, mouthOpennessTarget, voiceState } = useHexaStore();
   
   // Local animation state using refs to prevent re-renders
   const animationFrameRef = useRef<number | null>(null);
@@ -147,7 +147,7 @@ export const AnimatedMouth: React.FC<AnimatedMouthProps> = ({
   // Main animation loop using requestAnimationFrame - now reads from ref
   const animateMouth = useCallback(() => {
     // Get the current voice state from the store to avoid stale closures
-    const currentVoiceState = useAnimationStore.getState().voiceState;
+    const currentVoiceState = useHexaStore.getState().voiceState;
     
     // Stop animation if voice state is idle
     if (currentVoiceState === 'idle') {
@@ -155,9 +155,9 @@ export const AnimatedMouth: React.FC<AnimatedMouthProps> = ({
       currentOpenness.set(0); // Reset to closed
       
       // Reset store target only if it's not already 0 (avoid hammering store)
-      const currentTarget = useAnimationStore.getState().mouthOpennessTarget;
+      const currentTarget = useHexaStore.getState().mouthOpennessTarget;
       if (currentTarget !== 0) {
-        useAnimationStore.getState().setMouthTarget(0);
+        useHexaStore.getState().setMouthTarget(0);
       }
       
       if (animationFrameRef.current) {
@@ -281,7 +281,7 @@ export const AnimatedMouth: React.FC<AnimatedMouthProps> = ({
 
   // STRICT PRODUCTION MODE: Use dynamic path ONLY when ALL conditions are met
   // This prevents phantom mouth animation when no audio is actually playing
-  const { isAudioPlaying } = useAnimationStore();
+  const { isAudioPlaying } = useHexaStore();
   const shouldUseDynamicPath =
     isCurrentlySpeaking &&           // Voice state must be 'speaking'
     isAudioPlaying &&                 // Audio element must be actively playing

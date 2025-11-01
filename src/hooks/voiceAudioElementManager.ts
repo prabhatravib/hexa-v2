@@ -1,6 +1,6 @@
 import type { MutableRefObject } from 'react';
 import { initializeAudioAnalysis, resetAudioAnalysis, stopAudioAnalysis } from './voiceAudioAnalysis';
-import { useAnimationStore, VoiceState } from '@/store/animationStore';
+import { useHexaStore, VoiceState } from '@/store/hexaStore';
 
 /**
  * Validates that an audio element has a valid, active audio stream.
@@ -141,7 +141,7 @@ export const setupAudioElementHandlers = (
 
   // Fallback: ensure analyser is running even if remote_track isn't emitted
   audioEl.addEventListener('playing', async () => {
-    if (useAnimationStore.getState().isVoiceDisabled) {
+    if (useHexaStore.getState().isVoiceDisabled) {
       console.log('🔇 Voice disabled: pausing audio element on playing');
       try { (audioEl as any).muted = true; if (!audioEl.paused) audioEl.pause(); } catch {}
       (window as any).__currentVoiceState = 'idle';
@@ -152,7 +152,7 @@ export const setupAudioElementHandlers = (
     // STRICT VALIDATION: Verify audio stream is valid before starting animation
     if (!isAudioStreamValid(audioEl)) {
       console.warn('⚠️ Audio playing event fired but stream validation failed - not starting animation');
-      useAnimationStore.getState().setAudioPlaying(false);
+      useHexaStore.getState().setAudioPlaying(false);
       return;
     }
 
@@ -164,7 +164,7 @@ export const setupAudioElementHandlers = (
       currentTime: audioEl.currentTime
     });
     audioPlaying = true;
-    useAnimationStore.getState().setAudioPlaying(true);
+    useHexaStore.getState().setAudioPlaying(true);
 
     // Set up audio track monitoring for this stream
     if (audioEl.srcObject instanceof MediaStream) {
@@ -179,7 +179,7 @@ export const setupAudioElementHandlers = (
         console.log('🔇 Audio track stopped - forcing idle state');
         audioPlaying = false;
         analysisStarted = false;
-        useAnimationStore.getState().setAudioPlaying(false);
+        useHexaStore.getState().setAudioPlaying(false);
         resetAudioAnalysis();
         if (stopSpeaking) {
           stopSpeaking();
@@ -216,7 +216,7 @@ export const setupAudioElementHandlers = (
   
   // Also handle play event
   audioEl.addEventListener('play', () => {
-    if (useAnimationStore.getState().isVoiceDisabled) {
+    if (useHexaStore.getState().isVoiceDisabled) {
       console.log('🔇 Voice disabled: pausing audio element on play');
       try { (audioEl as any).muted = true; if (!audioEl.paused) audioEl.pause(); } catch {}
       (window as any).__currentVoiceState = 'idle';
@@ -250,7 +250,7 @@ export const setupAudioElementHandlers = (
       console.log(`🎵 Audio playing: time=${audioEl.currentTime.toFixed(2)}s, duration=${audioEl.duration.toFixed(2)}s`);
     }
     
-    const store = useAnimationStore.getState();
+    const store = useHexaStore.getState();
     const now = Date.now();
     const lastMouthMotion = store.mouthTargetUpdatedAt || 0;
     const speechIntensity = store.speechIntensity || 0;
@@ -363,7 +363,7 @@ export const setupAudioElementHandlers = (
 
     // Reset mouth animation target (SSR-safe)
     try {
-      const store = useAnimationStore.getState();
+      const store = useHexaStore.getState();
       store.setAudioPlaying(false);
       if (store.setMouthTarget) {
         store.setMouthTarget(0);
@@ -387,7 +387,7 @@ export const setupAudioElementHandlers = (
 
     // Record latest idle transition for playback guard
     try {
-      const storeState = useAnimationStore.getState();
+      const storeState = useHexaStore.getState();
       lastHandledEnergyTs = Math.max(lastHandledEnergyTs, storeState.mouthTargetUpdatedAt || 0);
     } catch {}
     lastVoiceState = 'idle';
@@ -425,7 +425,7 @@ export const setupAudioElementHandlers = (
 
     // Record latest idle transition for playback guard
     try {
-      const storeState = useAnimationStore.getState();
+      const storeState = useHexaStore.getState();
       lastHandledEnergyTs = Math.max(lastHandledEnergyTs, storeState.mouthTargetUpdatedAt || 0);
     } catch {}
     lastVoiceState = 'idle';
@@ -440,7 +440,7 @@ export const setupAudioElementHandlers = (
     
     // Reset mouth animation target (SSR-safe)
     try {
-      const store = useAnimationStore.getState();
+      const store = useHexaStore.getState();
       store.setAudioPlaying(false);
       if (store.setMouthTarget) {
         store.setMouthTarget(0);
@@ -462,7 +462,7 @@ export const setupAudioElementHandlers = (
 
     // Record latest idle transition for playback guard
     try {
-      const storeState = useAnimationStore.getState();
+      const storeState = useHexaStore.getState();
       lastHandledEnergyTs = Math.max(lastHandledEnergyTs, storeState.mouthTargetUpdatedAt || 0);
     } catch {}
     lastVoiceState = 'idle';
@@ -478,7 +478,7 @@ export const setupAudioElementHandlers = (
     
     // Reset mouth animation target (SSR-safe)
     try {
-      const store = useAnimationStore.getState();
+      const store = useHexaStore.getState();
       store.setAudioPlaying(false);
       if (store.setMouthTarget) {
         store.setMouthTarget(0);
@@ -495,7 +495,7 @@ export const setupAudioElementHandlers = (
 
     // Record latest idle transition for playback guard
     try {
-      const storeState = useAnimationStore.getState();
+      const storeState = useHexaStore.getState();
       lastHandledEnergyTs = Math.max(lastHandledEnergyTs, storeState.mouthTargetUpdatedAt || 0);
     } catch {}
     lastVoiceState = 'idle';

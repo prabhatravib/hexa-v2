@@ -1,7 +1,7 @@
 import type { MutableRefObject } from 'react';
 import { initializeAudioAnalysis, stopAudioAnalysis } from './voiceAudioAnalysis';
 import { setupAudioElementHandlers } from './voiceAudioElementManager';
-import { useAnimationStore, VoiceState } from '@/store/animationStore';
+import { useHexaStore, VoiceState } from '@/store/hexaStore';
 import { isConnectionHealthCheckEnabled } from '../lib/connectionHealthConfig';
 
 
@@ -30,7 +30,7 @@ export const initializeWebRTCConnection = async (
       return false; // Don't establish connection
     }
     
-    const disabled = useAnimationStore.getState().isVoiceDisabled;
+    const disabled = useHexaStore.getState().isVoiceDisabled;
     if (disabled) {
       console.log('🔇 Voice disabled: blocking WebRTC connection');
       return false; // Don't establish connection
@@ -112,7 +112,7 @@ export const initializeWebRTCConnection = async (
     
     // Check if voice is disabled before processing audio
     try {
-      const disabled = useAnimationStore.getState().isVoiceDisabled;
+      const disabled = useHexaStore.getState().isVoiceDisabled;
       if (disabled) {
         console.log('🔇 Voice disabled: blocking remote audio track processing');
         return; // Block all audio processing when voice is disabled
@@ -133,7 +133,7 @@ export const initializeWebRTCConnection = async (
       audioEl.volume = 1;
 
       try {
-        const disabled = useAnimationStore.getState().isVoiceDisabled;
+        const disabled = useHexaStore.getState().isVoiceDisabled;
         if (disabled) {
           console.log('dY"? Voice disabled: muting and pausing remote audio track');
           try { (audioEl as any).muted = true; if (!audioEl.paused) audioEl.pause(); } catch {}

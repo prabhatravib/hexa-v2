@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { safeSessionSend } from '@/lib/voiceSessionUtils';
 
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
@@ -32,8 +32,8 @@ export const useVoiceControlService = ({
   isPlayingRef
 }: VoiceControlServiceOptions) => {
   
-  // Get voice disabled state from animation store
-  const { isVoiceDisabled } = useAnimationStore();
+  // Get voice disabled state from hexa store
+  const { isVoiceDisabled } = useHexaStore();
   
   // Start recording
   const startRecording = useCallback(async () => {

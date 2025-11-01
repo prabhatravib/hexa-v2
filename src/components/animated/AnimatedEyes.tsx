@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { TIMING, COLORS, OPACITY, EASING } from '@/animations/constants';
 
 interface AnimatedEyesProps {
@@ -18,7 +18,7 @@ export const AnimatedEyes: React.FC<AnimatedEyesProps> = ({
   trackMouse = false,
   className = '',
 }) => {
-  const { isBlinking, expressionState, animationState } = useAnimationStore();
+  const { isBlinking, expressionState, animationState } = useHexaStore();
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [isLookingAround, setIsLookingAround] = useState(false);
 

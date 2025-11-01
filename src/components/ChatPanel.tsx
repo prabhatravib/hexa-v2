@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { MessageBubble, Message } from './MessageBubble';
 import { AspectSelector, AspectConfig } from './AspectSelector';
 import { updateAspectContext } from '@/lib/externalContext';
@@ -47,7 +47,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const pendingTextMessagesRef = useRef<Array<{ text: string; expiresAt: number }>>([]);
   const responseContextMap = useRef<Map<string, 'voice' | 'text'>>(new Map());
   const recentResponses = useRef<Set<string>>(new Set());
-  const { voiceState, isVoiceDisabled } = useAnimationStore();
+  const { voiceState, isVoiceDisabled } = useHexaStore();
 
   // ENHANCED MODE STATE - Simple single panel approach
   const [activeAspect, setActiveAspect] = useState<AspectNumber>(1);

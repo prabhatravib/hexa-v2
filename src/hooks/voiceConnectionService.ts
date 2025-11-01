@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
-import { useAnimationStore, VoiceState } from '../store/animationStore';
+import { useHexaStore, VoiceState } from '../store/hexaStore';
 import { isVoiceDisabledNow, silenceAudioEverywhere } from '@/lib/voiceDisableGuard';
 import { getSessionSend, isRealtimeReady } from '@/lib/voiceSessionUtils';
 import { injectExternalContext } from '@/lib/externalContext';
@@ -39,7 +39,7 @@ export const useVoiceConnectionService = ({
   setSpeechIntensity
 }: VoiceConnectionServiceOptions) => {
   
-  const { setInitializationState, setInitializationProgress } = useAnimationStore();
+  const { setInitializationState, setInitializationProgress } = useHexaStore();
   
   // Set up global function to receive response text from session events
   useEffect(() => {
@@ -137,7 +137,7 @@ export const useVoiceConnectionService = ({
         console.log('dY"? localStorage now contains:', localStorage.getItem('voiceSessionId'));
       }
 
-      const voiceDisabled = useAnimationStore.getState().isVoiceDisabled;
+      const voiceDisabled = useHexaStore.getState().isVoiceDisabled;
       const existingSession = openaiAgentRef.current;
       const existingSessionId = lastSessionIdRef.current;
       const rtcState = existingSession?._pc?.connectionState;
@@ -341,7 +341,7 @@ export const useVoiceConnectionService = ({
               const currentVoiceState = (window as any).__currentVoiceState;
               if (currentVoiceState === 'speaking') {
                 console.log('⚠️ Force stopping speaking state after audio_done');
-                useAnimationStore.getState().stopSpeaking();
+                useHexaStore.getState().stopSpeaking();
               }
             }, 100);
           };

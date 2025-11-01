@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { useAnimationState, useAnimationSequence } from '@/hooks/useAnimationState';
 import { useVoiceInteraction } from '@/hooks/useVoiceInteraction';
 import { useVoiceStatus } from '@/hooks/useVoiceStatus';
@@ -43,7 +43,7 @@ export const AnimatedHexagon: React.FC<AnimatedHexagonProps> = ({
     initializationProgress,
     isReadyForInteraction,
     isVoiceDisabled,
-  } = useAnimationStore();
+  } = useHexaStore();
 
   // Use the enhanced animation hooks
   const { timeSinceLastActivity } = useAnimationState();

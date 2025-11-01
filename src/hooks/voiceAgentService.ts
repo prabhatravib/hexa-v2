@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { initializeOpenAIAgentOnce } from './voiceAgentInitializer';
-import { VoiceState } from '@/store/animationStore';
+import { VoiceState } from '@/store/hexaStore';
 
 
 

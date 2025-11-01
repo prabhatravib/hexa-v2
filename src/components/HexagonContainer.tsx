@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedHexagon } from './animated/AnimatedHexagon';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 
 interface HexagonContainerProps {
   size?: number;
@@ -20,7 +20,7 @@ export const HexagonContainer: React.FC<HexagonContainerProps> = ({
   onSendTextAvailable,
   onConnectionChange
 }) => {
-  const { isVoiceDisabled, setVoiceDisabled, initializationState } = useAnimationStore();
+  const { isVoiceDisabled, setVoiceDisabled, initializationState } = useHexaStore();
 
   const toggleVoice = () => {
     setVoiceDisabled(!isVoiceDisabled);

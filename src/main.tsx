@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 import { Toaster } from 'sonner';
-import { useAnimationStore } from './store/animationStore';
+import { useHexaStore } from './store/hexaStore';
 import { safeSessionSend } from './lib/voiceSessionUtils';
 import { silenceAudioEverywhere } from './lib/voiceDisableGuard';
 
@@ -66,7 +66,7 @@ const handleHostControlMessage = (event: MessageEvent) => {
     console.log('[Hexa] Received muteAllAudio control message:', payload);
     const muted = Boolean((payload as any).muted);
     try {
-      const store = useAnimationStore.getState();
+      const store = useHexaStore.getState();
       store?.setVoiceDisabled?.(muted);
     } catch (error) {
       console.warn('[Hexa] Failed to update voice disabled state from host message:', error);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Mic, MicOff, Volume2, AlertCircle, Loader2 } from 'lucide-react';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 
 /**
  * Hook for voice status display logic
@@ -12,7 +12,7 @@ export const useVoiceStatus = () => {
     voiceState, 
     isVoiceDisabled, 
     initializationState
-  } = useAnimationStore();
+  } = useHexaStore();
 
   // Get voice status icon for the center of the hexagon
   const getVoiceStatusIcon = (isConnected: boolean) => {

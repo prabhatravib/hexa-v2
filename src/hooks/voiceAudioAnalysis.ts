@@ -1,4 +1,4 @@
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { handleSilenceImmediately } from '@/hooks/useVoiceAnimation';
 
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
@@ -28,7 +28,7 @@ export const initializeAudioAnalysis = async (
   
   // Check if voice is disabled before starting audio analysis
   try {
-    const disabled = useAnimationStore.getState().isVoiceDisabled;
+    const disabled = useHexaStore.getState().isVoiceDisabled;
     if (disabled) {
       console.log('🔇 Voice disabled: blocking audio analysis initialization');
       return;
@@ -150,7 +150,7 @@ export const initializeAudioAnalysis = async (
         analysisRafId = null;
         analysisStarted = false; // Ensure flag is cleared
         if (setSpeechIntensity) setSpeechIntensity(0);
-        useAnimationStore.getState().setVadSpeaking(false);
+        useHexaStore.getState().setVadSpeaking(false);
         return;
       }
 
@@ -175,7 +175,7 @@ export const initializeAudioAnalysis = async (
       level += alpha * ((speaking ? norm : 0) - level);
       
       // Update VAD flag in store (for potential future use)
-      useAnimationStore.getState().setVadSpeaking(speaking);
+      useHexaStore.getState().setVadSpeaking(speaking);
       
       // Note: VAD flag is tracked but animation is controlled by voiceState
       // The voiceState is driven by OpenAI's agent_start/agent_end events
@@ -261,7 +261,7 @@ export const stopAudioAnalysis = () => {
   
   // Reset mouth animation target to prevent stuck-open mouth (SSR-safe)
   try {
-    const store = useAnimationStore.getState();
+    const store = useHexaStore.getState();
     if (store.setMouthTarget) {
       store.setMouthTarget(0);
     }

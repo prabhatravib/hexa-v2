@@ -1,7 +1,7 @@
 import { MutableRefObject } from 'react';
 import { safeSessionSend, isRealtimeReady } from '@/lib/voiceSessionUtils';
 import { getBaseInstructions } from '@/lib/externalContext';
-import type { VoiceState } from '@/store/animationStore';
+import type { VoiceState } from '@/store/hexaStore';
 import {
   collectAssistantSnapshot,
   collectUserItemIds,

@@ -5,7 +5,7 @@ import { useVoiceControlService } from './voiceControlService';
 import { useVoiceAnimation } from './useVoiceAnimation';
 import { getSupportedLanguageCodes, DEFAULT_LANGUAGE } from '@/lib/languageConfig';
 import { useExternalDataStore } from '@/store/externalDataStore';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 import { createSendTextHandler } from './voiceInteraction/sendTextHandler';
 import { sessionIsolation } from '@/lib/sessionIsolation';
 
@@ -45,8 +45,8 @@ export const useVoiceInteraction = (options: UseVoiceInteractionOptions = {}) =>
     setInitializationState,
   } = useVoiceAnimation();
 
-  // Get voice disabled state from animation store
-  const { isVoiceDisabled } = useAnimationStore();
+  // Get voice disabled state from hexa store
+  const { isVoiceDisabled } = useHexaStore();
 
   const { initializeOpenAIAgent, initializeOpenAIAgentFromWorker } = useVoiceAgentService({
     setVoiceState,

@@ -1,8 +1,8 @@
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 
 export function isVoiceDisabledNow(): boolean {
   try {
-    return useAnimationStore.getState().isVoiceDisabled;
+    return useHexaStore.getState().isVoiceDisabled;
   } catch {
     return false;
   }

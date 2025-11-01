@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 
 // Global reference for immediate control from non-React modules
 let globalHandleSilence: (() => void) | null = null;
@@ -21,7 +21,7 @@ export const useVoiceAnimation = () => {
     startSpeaking,
     stopSpeaking,
     setInitializationState,
-  } = useAnimationStore();
+  } = useHexaStore();
 
   // Shared AudioContext for all analysis and playback; resumed on user gesture
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -130,7 +130,7 @@ export const useVoiceAnimation = () => {
         return;
       }
 
-      const storeState = useAnimationStore.getState();
+      const storeState = useHexaStore.getState();
       const allowAnimation =
         storeState.voiceState === 'speaking' ||
         storeState.vadSpeaking ||
@@ -224,7 +224,7 @@ export const useVoiceAnimation = () => {
         : Number.POSITIVE_INFINITY;
 
       // Get current store state for audio playing check
-      const storeState = useAnimationStore.getState();
+      const storeState = useHexaStore.getState();
       const hasStoreEnergy = vadSpeaking || storeSpeechIntensity > 0.02;
       const hasCurrentAudio = hasStoreEnergy || storeState.isAudioPlaying;
 
@@ -285,7 +285,7 @@ export const useVoiceAnimation = () => {
     
     const processedIntensity = processSpeechIntensity(rawIntensity);
     latestIntensityRef.current = processedIntensity;
-    const storeState = useAnimationStore.getState();
+    const storeState = useHexaStore.getState();
 
     const shouldAnimate =
       storeState.voiceState === 'speaking' ||

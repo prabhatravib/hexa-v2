@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAnimationStore } from '@/store/animationStore';
+import { useHexaStore } from '@/store/hexaStore';
 
 interface DevPanelProps {
   isVisible?: boolean;
 }
 
 export const DevPanel: React.FC<DevPanelProps> = ({ isVisible = false }) => {
-  const { mouthOpennessTarget, voiceState, setMouthTarget, resetMouth } = useAnimationStore();
+  const { mouthOpennessTarget, voiceState, setMouthTarget, resetMouth } = useHexaStore();
   
   const [testTarget, setTestTarget] = useState(0);
   const [simulateSpeaking, setSimulateSpeaking] = useState(false);
@@ -173,7 +173,7 @@ export const DevPanel: React.FC<DevPanelProps> = ({ isVisible = false }) => {
           <button
             onClick={() => {
               console.log('🧪 Test button: Starting speaking...');
-              useAnimationStore.getState().startSpeaking();
+              useHexaStore.getState().startSpeaking();
             }}
             className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
           >
@@ -182,7 +182,7 @@ export const DevPanel: React.FC<DevPanelProps> = ({ isVisible = false }) => {
           <button
             onClick={() => {
               console.log('🧪 Test button: Stopping speaking...');
-              useAnimationStore.getState().stopSpeaking();
+              useHexaStore.getState().stopSpeaking();
             }}
             className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
           >
@@ -195,7 +195,7 @@ export const DevPanel: React.FC<DevPanelProps> = ({ isVisible = false }) => {
           <button
             onClick={() => {
               console.log('🧪 Manual mouth test: Setting target to 0.8');
-              useAnimationStore.getState().setMouthTarget(0.8);
+              useHexaStore.getState().setMouthTarget(0.8);
             }}
             className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
           >
@@ -204,7 +204,7 @@ export const DevPanel: React.FC<DevPanelProps> = ({ isVisible = false }) => {
           <button
             onClick={() => {
               console.log('🧪 Manual mouth test: Setting target to 0.2');
-              useAnimationStore.getState().setMouthTarget(0.2);
+              useHexaStore.getState().setMouthTarget(0.2);
             }}
             className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600"
           >
